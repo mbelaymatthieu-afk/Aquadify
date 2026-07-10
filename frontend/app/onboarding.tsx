@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useToast } from "@/src/components/Toast";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
+import { computeDailyGoal } from "@/src/lib/hydration";
 import { useI18n } from "@/src/i18n";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
@@ -54,17 +55,12 @@ export default function Onboarding() {
   const finish = async () => {
     setBusy(true);
     try {
-      const updated = await api.put(
-        "/profile",
-        {
-          weight: parseFloat(weight) || 70,
-          age: parseInt(age, 10) || 30,
-          sex,
-          activity,
-          climate,
-        },
-        token,
-      );
+      const w = parseFloat(weight) || 70;
+      const a = parseInt(age, 10) || 30;
+      await api.put("/profile", { weight: w, age: a, sex, activity, climate }, token);
+      // Override the backend goal with our realistic, evidence-based value.
+      const goal = computeDailyGoal({ weight: w, age: a, sex, activity, climate });
+      const updated = await api.put("/settings", { daily_goal_ml: goal }, token);
       setUser(updated);
       router.replace("/(tabs)");
     } catch (e: any) {

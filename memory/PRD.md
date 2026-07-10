@@ -23,11 +23,24 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 
 ## Implemented (2026-06-28)
 - Auth screen: email/password login+register, Continue with Google (Emergent), CGU disclaimer gate, FR/EN/ES switcher. Faithful Aquadify branding (water-drop mascot, blue gradient).
-- Onboarding: weight/age/sex/activity/climate -> backend computes daily goal.
+- Onboarding: weight/age/sex/activity/climate -> realistic client-side goal (computeDailyGoal), pushed via /settings.
 - Tabs: Aujourd'hui (today tracking + quick-add containers + custom amount + delete logs + water-drop progress), Progrès (7-day bar chart + average + days achieved + streaks + badges), Coach IA (AI chat with free-message limit + premium upsell), Profil (daily goal stepper, language, reminders, premium, logout).
 - Premium: Stripe checkout via WebBrowser + status polling.
 - Local hydration reminders via expo-notifications (replaces web push).
 - i18n FR/EN/ES, toasts (no Alerts), keyboard handling via react-native-keyboard-controller.
+
+## Enhancements (2026-07-10)
+- New premium AI-generated app icon (assets/images/icon.png, adaptive-icon, splash, favicon) — glossy droplet.
+- Redesigned in-app SVG brand mark (Mascot) to match.
+- Refonte hydration fill animation: Reanimated + SVG moving waves + pop on add (WaterDropProgress).
+- Realistic evidence-based daily goals (src/lib/hydration.ts, ~30 ml/kg adjusted) — lower than before.
+- Backend URL switched to deployed https://drip-track-1.emergent.host/api (preview backend was sleeping).
+
+## Pending (native build required)
+- AdMob (react-native-google-mobile-ads): free-tier ads only, hidden for Premium. Needs user's App IDs + Ad Unit IDs. Not testable in Expo Go/web.
+- Google Fit / Apple Health real read (steps/activity) + hydration adaptation. Needs dev build. Backend /health/* is mocked.
+- Premium AI insights (personalized analysis via LLM). Planned.
+
 
 ## Personas
 - Health-conscious user tracking daily water intake with gentle AI coaching and gamification.
