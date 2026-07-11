@@ -38,7 +38,11 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 
 ## Pending (native build required)
 - Google Fit / Apple Health real read (steps/activity) + hydration adaptation. Needs dev build. Backend /health/* is mocked.
-- Premium AI insights (personalized analysis via LLM). Planned.
+
+## Premium AI Insights (done 2026-07-11)
+- NEW endpoint POST /api/insights on the LOCAL backend (server.py) using Emergent LLM key (openai gpt-4o-mini) -> {summary, tips[3]} in fr/en/es.
+- Frontend Progress tab "Analyse IA": free users see summary + 1 tip + "Passer Premium" unlock CTA; premium users see all tips + refresh. Calls LOCAL backend via EXPO_PUBLIC_BACKEND_URL. Files: src/api/insights.ts, app/(tabs)/progress.tsx.
+- Verified by testing_agent iteration_3 (backend 4/4 pytest + frontend flow).
 
 ## AdMob (done 2026-07-11)
 - react-native-google-mobile-ads installed; app.json plugin with App ID ca-app-pub-8009813538542789~7753483038.
