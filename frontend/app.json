@@ -10,7 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mta.aquadify"
+      "bundleIdentifier": "com.mta.aquadify",
+      "infoPlist": {
+        "NSUserTrackingUsageDescription": "Show relevant ads in the free version"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -35,6 +38,13 @@
           "imageWidth": 220,
           "resizeMode": "contain",
           "backgroundColor": "#2F6FD0"
+        }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-8009813538542789~7753483038",
+          "iosAppId": "ca-app-pub-8009813538542789~7753483038"
         }
       ]
     ],

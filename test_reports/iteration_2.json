@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only regression of the Aquadify enhancements iteration passed 100%. Web preview boots cleanly with NO ad-banner testID present (AdBanner.web returns null; AdBanner.native is gated with try/require + Constants.appOwnership check so Expo Go/web never crash). CGU gate accepted -> Auth screen shows the new premium droplet logo + lang-en/lang-es/lang-fr switcher. Login with mobiletest123@aqua.com / Test1234! reaches Today screen directly (account already onboarded). Realistic hydration goal 2350 ml is displayed for the account (0 / 2350 ml under the water-drop; '2350 ml restants' status pill; Coach IA reply also references '2350 ml'), matching computeDailyGoal({weight:70, age:30, sex:'male', activity:'moderate', climate:'temperate'}) = 2100 + 250 = 2350. Water-drop animation renders with SVG waves + pop on add (0% -> 11% after glass 250ml -> 18% after custom 175ml). All quick-add containers (glass/cup/bottle/large_bottle) + quick-add-custom modal (custom-amount-input + custom-confirm) worked; success toast '+Xml ajoutés' + 'Prise supprimée' toast after log-delete-<id> tap. Progrès tab shows 7-day bar chart, moyenne (60 ml/jour), jours réussis, streaks (série actuelle/meilleure) and 14+ badges. Coach IA sent a real message and got a coherent AI response (French, contextual with current intake). Profil tab: goal-plus incremented 2400 -> 2450 (persists via /settings), language chips, reminders switch, and logout-button all functional; logout returns to /auth screen. Only console warnings observed: 'shadow*' style props deprecated (RN-web cosmetic) and 'props.pointerEvents' deprecation from a third-party lib — non-blocking, same as previous iteration.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "global", "issues": [
+        "RN-web deprecation warnings persist: 'shadow*' style props (should migrate to boxShadow) and 'props.pointerEvents' (should use style.pointerEvents). Non-blocking, most come from third-party libs (linear-gradient/charts)."
+      ]}
+    ],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_2.json"],
+  "action_items": [
+    "None blocking. Optionally migrate custom shadow* props to boxShadow to silence RN-web warnings."
+  ],
+  "critical_code_review_comments": [
+    "AdBanner.native.tsx correctly guards native module with try/require + Constants.appOwnership==='expo' check and returns null for premium users — safe for Expo Go & web (confirmed: no ad-banner testID in DOM).",
+    "src/lib/hydration.ts computeDailyGoal defaults (70/30/male/moderate/temperate) correctly returns 2350 ml; clamped 1200–4000; rounded to 50. Matches the goal rendered on Today.",
+    "onboarding.tsx overrides backend goal with computed value via PUT /settings then updates auth context — good end-to-end path.",
+    "WaterDropProgress uses Reanimated worklet buildWave + pop shared value on level change — animation triggers on add.",
+    "All interactive elements have testIDs, text wrapped in <Text>, StyleSheet.create used, EXPO_PUBLIC_AQUADIFY_API env var used for API base."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend-only)", "frontend": "100% (all 9 requested flows passed)"},
+  "seed_data_creation": "Used existing mobiletest123@aqua.com account (already onboarded, goal=2350). Added 1 glass (250ml) + 1 custom (175ml) log, deleted 1, then goal-plus incremented objective to 2450. Test data is minimal and self-contained.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Account mobiletest123@aqua.com is already onboarded with daily_goal_ml=2350 (may become 2450 after this run's goal-plus tap — reset via Profil goal-minus if strict 2350 needed). Frontend uses EXPO_PUBLIC_AQUADIFY_API=https://drip-track-1.emergent.host/api. AdBanner intentionally returns null on web/Expo Go — do NOT expect the ad-banner testID; only verify absence and that app does not crash. Google login redirects off-domain and Stripe uses LIVE keys — do not complete either on web. Coach IA free-message counter was at '1 restant' after this run; further sends may trigger the coach-upgrade-button state.",
+  "rca_of_issue": "N/A — no defects reproduced."
+}

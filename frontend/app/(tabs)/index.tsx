@@ -19,6 +19,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { WaterDropProgress } from "@/src/components/WaterDropProgress";
+import AdBanner from "@/src/components/AdBanner";
 import { useToast } from "@/src/components/Toast";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
@@ -235,6 +236,8 @@ export default function TodayScreen() {
               ))
           )}
         </View>
+
+        <AdBanner />
       </ScrollView>
 
       {/* custom amount modal */}
