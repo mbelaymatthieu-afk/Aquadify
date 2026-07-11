@@ -1,0 +1,32 @@
+{
+  "summary": "New premium AI hydration insights ('Analyse IA') feature verified end-to-end. Backend: 4/4 pytest tests pass against the LOCAL backend via EXPO_PUBLIC_BACKEND_URL (health + POST /api/insights in fr, en, and with default body). The endpoint returns HTTP 200 with a non-empty 'summary' string and a 'tips' array of 1-3 short strings, in the requested language (English response verified via stopword heuristic). Frontend: CGU accepted -> login mobiletest123@aqua.com/Test1234! -> Today screen loaded (goal 2450 ml from previous iteration), quick-add-glass +250 ml regression works (7%, 175/2450 shown briefly then updates). Progrès tab renders insights-card immediately, then within a few seconds displays the AI summary ('Chaque petite gorgée compte, commencez aujourd'hui à vous hydrater !') and insight-tip-0 ('Fixez un rappel pour boire de l'eau.'). Since the account is NOT premium, insights-unlock CTA is visible with title 'Recommandations Premium', body 'Débloquez vos analyses IA personnalisées et illimitées avec Premium.' and 'Passer Premium' button. Tapping insights-unlock navigates to /premium showing testID premium-subscribe-button (label 'Devenir Premium'); Stripe checkout NOT initiated (per test policy). Coach IA regression: successfully sent a French message and received a coherent contextual AI reply (referencing 2450 ml goal); 4 coach-msg-* messages present. Only non-blocking RN-web deprecation warnings previously reported ('shadow*', 'props.pointerEvents', expo-notifications web warning) remain.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_insights.py",
+    "/app/test_reports/pytest/pytest_results.xml",
+    "/app/test_reports/iteration_3.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "backend/server.py: /api/insights uses emergentintegrations LlmChat with openai gpt-4o-mini and EMERGENT_LLM_KEY from env; robustly strips ```json fences and clamps tips to 3. Returns {summary:'',tips:[],error:true} on failure — frontend uses this to render insightsError state (good).",
+    "backend/server.py: 'logger' is defined AFTER hydration_insights (line 122) but only referenced inside the except branch, so it works — however a future exception raised BEFORE logger init would throw NameError. Minor: move logger config above route definitions to be defensive.",
+    "frontend/src/api/insights.ts correctly targets EXPO_PUBLIC_BACKEND_URL + /api/insights (LOCAL backend), separate from EXPO_PUBLIC_AQUADIFY_API (remote) — matches product intent.",
+    "progress.tsx: insightsOnce ref prevents refetch on every focus (good). Free users only see tips.slice(0,1) — matches requirement. Locked box tap navigates to /premium correctly.",
+    "All new interactive elements have testIDs (insights-card, insight-tip-0, insights-unlock, insights-refresh)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_insights.py (new)"
+  ],
+  "success_rate": {"backend": "100% (4/4 pytest)", "frontend": "100% (all requested flows)"},
+  "seed_data_creation": "Added 1 quick-add-glass (250 ml) during regression check on the mobiletest123@aqua.com account. No other test data created.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "LOCAL backend /api/insights takes 3-6s to respond (openai gpt-4o-mini via Emergent LLM). Free-tier Coach IA quota shows 'Vous avez utilisé vos messages gratuits.' after this run — further coach sends will surface coach-upgrade-button instead of a reply, so any future coach regression should either use another account or expect the upgrade CTA. Account daily goal is now 2450 ml (from iteration_2 goal-plus). Auth screen testIDs are auth-email-input / auth-password-input / auth-submit-button and CGU gate uses cgu-accept-button (NOT email-input / login-button).",
+  "rca_of_issue": "N/A — feature works as specified."
+}
