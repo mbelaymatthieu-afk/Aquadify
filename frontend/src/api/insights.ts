@@ -1,6 +1,8 @@
 // Premium AI hydration insights — served by the LOCAL backend (Emergent LLM),
 // since the remote drip-track1 backend can't be modified.
-const LOCAL = process.env.EXPO_PUBLIC_BACKEND_URL as string;
+import { INSIGHTS_BASE } from "@/src/config";
+
+const LOCAL = INSIGHTS_BASE;
 
 export type Insights = { summary: string; tips: string[]; error?: boolean };
 

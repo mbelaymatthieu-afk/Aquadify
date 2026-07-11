@@ -1,0 +1,28 @@
+{
+  "summary": "Frontend-only regression after auth base-URL refactor (src/config.ts + app.json expo.extra fallback). All requested flows pass on the web preview. REGISTER: aqua_fix_1783791908@test.com / Test1234! submitted through CGU-gated auth screen with the toggle-mode signup → no 'Network request failed', app navigated to onboarding (onb-finish-button visible with the 'Faisons connaissance' form). LOGIN: mobiletest123@aqua.com / Test1234! → reached Today screen showing water-drop at 17% (425 / 2450 ml). DATA CALL: quick-add-glass tapped → progress updated from 17% (425 ml) to 28% (675 ml), i.e. +250 ml, proving the API call to the deployed drip-track1 backend still works after the refactor. PROGRÈS regression: chart renders 7-day bars, ml/jour average (132) and Jours réussis (0/7) shown, Séries cards render, and the 'Analyse IA' card (insights-card) with 'Vos recommandations personnalisées' + spinner appears immediately on tab entry. Only pre-existing non-blocking RN-web warnings remain (shadow*, props.pointerEvents deprecations, expo-notifications web warning, useNativeDriver JS fallback).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": [
+    "/app/test_reports/iteration_4.json"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "src/config.ts correctly resolves AQUADIFY_API from process.env.EXPO_PUBLIC_AQUADIFY_API || Constants.expoConfig.extra.aquadifyApiUrl — this is the correct pattern for EAS builds where .env is not bundled. app.json expo.extra.aquadifyApiUrl is set to https://drip-track-1.emergent.host/api, so TestFlight/production builds will now have a valid base URL and the reported 'Network request failed' bug will no longer occur.",
+    "src/config.ts: INSIGHTS_BASE falls back to extra.insightsApiUrl = 'https://drip-track-1.emergent.host' (root of deployed host). NOTE: this is a DIFFERENT origin than the LOCAL Emergent backend that actually serves /api/insights in dev/preview. In a production EAS build without EXPO_PUBLIC_BACKEND_URL, fetchInsights will hit https://drip-track-1.emergent.host/api/insights which does NOT exist on the remote drip-track1 backend (per iteration_3 comments the insights endpoint lives on the LOCAL/preview backend only). Main agent should either (a) also deploy /api/insights on drip-track1, or (b) put the LOCAL preview backend URL into extra.insightsApiUrl, or (c) accept that the 'Analyse IA' card will show insightsError in production builds. Preview testing cannot reproduce this because EXPO_PUBLIC_BACKEND_URL is set in .env.",
+    "src/api/client.ts and src/api/insights.ts import from '@/src/config' — clean single source of truth. No hardcoded URLs remain in these two files.",
+    "auth.tsx: submit() sets busy state around login/register and toasts e?.message on failure, so a real 'Network request failed' would surface as a red toast — this is what the fix removes.",
+    "All auth testIDs referenced in the review request are present (cgu-accept-button, auth-toggle-mode, auth-name-input, auth-email-input, auth-password-input, auth-submit-button)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% (4/4 flows)"},
+  "seed_data_creation": "Created 1 new account via register: aqua_fix_1783791908@test.com / Test1234! (Aqua Fix, 70kg/30y/male/moderate/temperate onboarding shown but not submitted). Added 1 quick-add-glass (250 ml) to mobiletest123@aqua.com during regression, bringing its today total from 425 ml to 675 ml (28% of 2450 ml goal).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "The auth base-URL refactor is fixed and verified in the preview. IMPORTANT caveat for production EAS builds: extra.insightsApiUrl in app.json points at https://drip-track-1.emergent.host which most likely does NOT expose /api/insights (that endpoint lives on the LOCAL preview backend per iteration_3). Cannot be reproduced in web preview because .env still provides EXPO_PUBLIC_BACKEND_URL. If the goal is 'Analyse IA' to work in TestFlight, main agent must decide where to host /api/insights and update extra.insightsApiUrl accordingly. Auth testIDs remain auth-*-input/auth-submit-button/auth-toggle-mode and CGU gate is cgu-accept-button.",
+  "rca_of_issue": "Original bug: EAS/TestFlight build had no EXPO_PUBLIC_AQUADIFY_API (because .env is git-ignored and not bundled into the binary), so fetch(`${undefined}/auth/register`) failed with 'Network request failed'. Fix: (1) added expo.extra.aquadifyApiUrl + insightsApiUrl in app.json (bundled into the binary), (2) new src/config.ts resolves base URL as env-var || Constants.expoConfig.extra.*, (3) client.ts + insights.ts import BASE from src/config. Verified in preview that env-var path still works: register+login+data call+progress all succeed with no 'Network request failed'."
+}

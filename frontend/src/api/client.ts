@@ -1,8 +1,9 @@
 // Talks to the EXISTING drip-track1 (Aquadify) FastAPI backend.
-// Base URL comes from EXPO_PUBLIC_AQUADIFY_API (.env) — switch to the
-// deployed production URL after publishing.
+// Base URL resolved from src/config (env in dev, app.json `extra` in builds).
 
-const BASE = process.env.EXPO_PUBLIC_AQUADIFY_API as string;
+import { AQUADIFY_API } from "@/src/config";
+
+const BASE = AQUADIFY_API;
 
 type Method = "GET" | "POST" | "PUT" | "DELETE";
 
