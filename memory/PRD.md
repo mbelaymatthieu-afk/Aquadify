@@ -36,6 +36,12 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - Realistic evidence-based daily goals (src/lib/hydration.ts, ~30 ml/kg adjusted) — lower than before.
 - Backend URL switched to deployed https://drip-track-1.emergent.host/api (preview backend was sleeping).
 
+## Bug fix (2026-07-11) — "Network request failed" on TestFlight
+- Cause: .env is git-ignored, so EAS builds had no EXPO_PUBLIC_AQUADIFY_API -> fetch to undefined URL.
+- Fix: added expo.extra.aquadifyApiUrl / insightsApiUrl in app.json + src/config.ts resolving `process.env || Constants.expoConfig.extra`. client.ts & insights.ts import from src/config. Verified iteration_4.
+- ACTION REQUIRED by user: rebuild the IPA (new EAS build) and upload the NEW build to TestFlight — the old build still has the bug.
+- Known: extra.insightsApiUrl points at drip-track1 which lacks /api/insights -> AI insights card degrades gracefully in production until that endpoint is deployed.
+
 ## Pending (native build required)
 - Google Fit / Apple Health real read (steps/activity) + hydration adaptation. Needs dev build. Backend /health/* is mocked.
 
