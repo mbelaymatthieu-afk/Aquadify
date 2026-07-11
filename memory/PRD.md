@@ -37,9 +37,13 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - Backend URL switched to deployed https://drip-track-1.emergent.host/api (preview backend was sleeping).
 
 ## Pending (native build required)
-- AdMob (react-native-google-mobile-ads): free-tier ads only, hidden for Premium. Needs user's App IDs + Ad Unit IDs. Not testable in Expo Go/web.
 - Google Fit / Apple Health real read (steps/activity) + hydration adaptation. Needs dev build. Backend /health/* is mocked.
 - Premium AI insights (personalized analysis via LLM). Planned.
+
+## AdMob (done 2026-07-11)
+- react-native-google-mobile-ads installed; app.json plugin with App ID ca-app-pub-8009813538542789~7753483038.
+- Banner unit ca-app-pub-8009813538542789/9752960414. Component src/components/AdBanner.native.tsx (guards Expo Go + premium), AdBanner.web.tsx returns null. Mounted at bottom of Today. Hidden for is_premium users. Uses TestIds in dev. Only renders on native build.
+- Bundle IDs: ios com.mta.aquadify, android com.mta.aquadify. iOS NSUserTrackingUsageDescription added.
 
 
 ## Personas
