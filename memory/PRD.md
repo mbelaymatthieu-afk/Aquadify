@@ -36,6 +36,23 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - Realistic evidence-based daily goals (src/lib/hydration.ts, ~30 ml/kg adjusted) — lower than before.
 - Backend URL switched to deployed https://drip-track-1.emergent.host/api (preview backend was sleeping).
 
+## Iteration 2026-07-12 — Renommage, Points d'eau, Santé Premium, Confidentialité, AdMob
+- Rename: "Coach IA"->"Aquacoach", "Analyse IA"->"Aquanalyse" partout (i18n fr/en/es, 0 occurrence restante, vérifié iteration_5).
+- New: app/water-points.tsx (OpenStreetMap Overpass, permission localisation contextuelle, liste+distance+itinéraire+signalement), app/health.tsx (réservé Premium: cadenas/avantages/CTA pour gratuits, /health/connect pour Premium), app/privacy.tsx (politique de confidentialité in-app).
+- New libs: src/api/waterpoints.ts, src/lib/geo.ts, src/components/WaterMap.native|web.tsx, src/lib/ads.native|web.ts.
+- AdMob: init au lancement via src/lib/ads (natif only, sinon bundle web cassait), bannière déplacée sur pages secondaires (Progrès/Profil), masquée Premium.
+- app.json: plugin expo-location + NSLocationWhenInUseUsageDescription.
+- Deps: expo-location, react-native-maps.
+
+## Restant / blocages App Store
+- IAP Apple: Premium via Stripe = blocage 3.1.1 + "restauration achats" (StoreKit non implémenté).
+- Affichage réel AdMob + ATT prompt (expo-tracking-transparency) : build natif.
+- Santé réelle (HealthKit/Google Fit lecture) : libs natives + build (backend /health/* mocké).
+- Android Maps: clé Google Maps API requise (iOS OK sans clé).
+- Aquanalyse prod: héberger /api/insights (sinon dégradation propre).
+- Politique de confidentialité: URL publique à héberger pour la fiche store.
+- Suppression de compte in-app: toujours manquante (blocage 5.1.1(v)).
+
 ## Bug fix (2026-07-11) — "Network request failed" on TestFlight
 - Cause: .env is git-ignored, so EAS builds had no EXPO_PUBLIC_AQUADIFY_API -> fetch to undefined URL.
 - Fix: added expo.extra.aquadifyApiUrl / insightsApiUrl in app.json + src/config.ts resolving `process.env || Constants.expoConfig.extra`. client.ts & insights.ts import from src/config. Verified iteration_4.
