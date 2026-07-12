@@ -15,6 +15,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useToast } from "@/src/components/Toast";
+import AdBanner from "@/src/components/AdBanner";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
@@ -263,6 +264,33 @@ export default function ProfileScreen() {
           )}
         </View>
 
+        {/* more */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("profile.preferences")}</Text>
+          <View style={styles.card}>
+            <Pressable testID="link-health" onPress={() => router.push("/health")} style={styles.linkRow}>
+              <Ionicons name="fitness-outline" size={20} color={colors.primary} />
+              <Text style={styles.linkText}>{t("health.title")}</Text>
+              {!user.is_premium && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
+            <Pressable testID="link-waterpoints" onPress={() => router.push("/water-points")} style={styles.linkRow}>
+              <Ionicons name="location-outline" size={20} color={colors.primary} />
+              <Text style={styles.linkText}>{t("waterPoints.title")}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
+            <Pressable
+              testID="link-privacy"
+              onPress={() => router.push("/privacy")}
+              style={[styles.linkRow, { borderBottomWidth: 0 }]}
+            >
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Text style={styles.linkText}>{t("privacy.title")}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+            </Pressable>
+          </View>
+        </View>
+
         {/* logout */}
         <View style={styles.section}>
           <Pressable
@@ -277,6 +305,8 @@ export default function ProfileScreen() {
             <Text style={styles.logoutText}>{t("profile.logout")}</Text>
           </Pressable>
         </View>
+
+        <AdBanner />
       </ScrollView>
     </View>
   );
@@ -410,4 +440,13 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
   logoutText: { color: colors.danger, fontSize: font.body, fontWeight: "700" },
+  linkRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  linkText: { flex: 1, fontSize: font.body, color: colors.text, fontWeight: "600" },
 });

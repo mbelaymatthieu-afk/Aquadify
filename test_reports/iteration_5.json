@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only regression on https://fastapi-mobile-port.preview.emergentagent.com after the RENAME + Water Points + Health/Privacy links + AdBanner web-null iteration. ALL 7 requested flows PASS. (1) BOOT: app boots on web (no AdMob bundling crash), CGU-gated auth screen renders with premium droplet logo and CGU body text mentions 'Aquacoach' (not 'Coach IA'). (2) RENAME: tab bar shows 'Aquacoach' (bottom tab), Progress tab renders the 'Aquanalyse' card (insights-card) — verified zero occurrences of the strings 'Coach IA' or 'Analyse IA' on auth screen, Today, Aquacoach and Progrès screens (Playwright body.innerText scan). (3) WATER POINTS: tapping the today-waterpoints card opens the water-points screen which shows the wp-permission-gate with title/body and wp-allow button; tapping wp-allow triggers browser geolocation (blocked in headless) and the screen does not crash (wp-back still present). (4) HEALTH (Premium-gated): Profil → link-health opens Santé & activité; because mobiletest123 is FREE the health-locked card + health-unlock button render and tapping health-unlock navigates to /premium where premium-subscribe-button is visible — the UI never triggered any /health/connect call for the free user. (5) PRIVACY: Profil → link-privacy opens privacy screen with privacy-body containing 808 chars of policy text. (6) AD BANNER: no [data-testid=ad-banner] on Today, Progress, or Profile (AdBanner.web returns null). (7) REGRESSIONS: quick-add-glass added +250 ml with success toast; Aquacoach coach-input + coach-send-button produced a full AI reply (chat len 1721+ chars, verified in screenshot); insights-card generated an Aquanalyse summary; goal-plus/goal-minus stepper works; profile-lang-en/fr/es chips switch language (EN switch produced 'Log out' / 'Profile'); logout-button returns to the CGU+auth screen. Only pre-existing non-blocking RN-web warnings remain (shadow*, props.pointerEvents deprecations, expo-notifications web listener, useNativeDriver JS fallback).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RN-web shadow* style props", "issue": "Deprecation warning: '\"shadow*\" style props are deprecated. Use \"boxShadow\".' — non-blocking, appears throughout theme shadow.soft/shadow.button. Reference: /app/frontend/src/theme.ts"},
+      {"component": "RN-web props.pointerEvents", "issue": "Deprecation warning: 'props.pointerEvents is deprecated. Use style.pointerEvents' — non-blocking, likely from a Pressable/View. Reference: RN-web internal."},
+      {"component": "expo-notifications on web", "issue": "'[expo-notifications] Listening to push token changes is not yet fully supported on web' — expected on web; ensure the notifications setup is guarded by Platform.OS !== 'web' to silence in production."},
+      {"component": "useNativeDriver JS fallback", "issue": "'Animated: `useNativeDriver` is not supported… Falling back to JS-based animation.' — expected on web; consider gating useNativeDriver:true behind Platform.OS !== 'web'."}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_5.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "translations.ts: 'coach.title' = 'Aquacoach' and 'insights.title' = 'Aquanalyse' across fr/en/es — rename is consistent in all three languages. CGU body in all three locales also mentions 'Aquacoach' instead of 'Coach IA'.",
+    "app/(tabs)/_layout.tsx uses t('coach.title') and t('insights.title') for tab/section titles, so a future rename will need only translations.ts changes (good decoupling).",
+    "app/health.tsx correctly gates on !user.is_premium and short-circuits to the locked card BEFORE calling api.post('/health/connect'), so no permission is ever requested for FREE users — matches the review requirement.",
+    "app/water-points.tsx uses expo-location.getForegroundPermissionsAsync / requestForegroundPermissionsAsync and falls through to setStatus('blocked') / setStatus('denied') on refusal — no crash path when geolocation is denied on web.",
+    "src/components/AdBanner.web.tsx is a 3-line stub returning null — correct pattern for platform-specific bundling. Native AdBanner.tsx (react-native-google-mobile-ads) is not shipped in the web bundle."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "not tested (frontend-only request)", "frontend": "100% (25/25 assertions across 7 flows)"},
+  "seed_data_creation": "None. Added 1 quick-add-glass (250 ml) to mobiletest123@aqua.com during regression (Today total went 0 → 250 ml on this test day).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Rename (Aquacoach / Aquanalyse), Water Points contextual permission gate (wp-permission-gate + wp-allow), Health Premium-gate (health-locked + health-unlock → premium-subscribe-button), Privacy screen (privacy-body), and web-null AdBanner all verified. IMPORTANT test flow note: Aquacoach FREE messages are consumed after every AI reply — after this iteration the account mobiletest123 has hit the free-limit ('Vous avez utilisé vos messages gratuits' + Passer Premium CTA) so subsequent regressions that need a NEW AI reply from coach-send-button may see the empty/limit state instead of a live LLM reply until the daily quota resets. To exercise coach-send-button live, either (a) reset the counter on the backend, or (b) create a fresh test account. The Aquanalyse insights-card still generates fine (server-side quota is separate). All tab-bar clicks work via Playwright locator('text=<tab label>').last (last occurrence — Expo Router duplicates labels in the DOM).",
+  "rca_of_issue": "Not applicable — no defects found. All items in the review request behave as specified."
+}

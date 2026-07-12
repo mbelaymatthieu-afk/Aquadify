@@ -16,6 +16,7 @@ import { BarChart } from "react-native-gifted-charts";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api/client";
+import AdBanner from "@/src/components/AdBanner";
 import { fetchInsights, Insights } from "@/src/api/insights";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
@@ -302,6 +303,8 @@ export default function ProgressScreen() {
             ))}
           </View>
         </View>
+
+        <AdBanner />
       </ScrollView>
     </View>
   );

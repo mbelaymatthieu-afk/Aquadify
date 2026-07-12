@@ -1,7 +1,7 @@
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Haptics from "expo-haptics";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -19,7 +19,6 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { WaterDropProgress } from "@/src/components/WaterDropProgress";
-import AdBanner from "@/src/components/AdBanner";
 import { useToast } from "@/src/components/Toast";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
@@ -40,6 +39,7 @@ export default function TodayScreen() {
   const { t } = useI18n();
   const { token, user } = useAuth();
   const toast = useToast();
+  const router = useRouter();
 
   const [total, setTotal] = useState(0);
   const [logs, setLogs] = useState<Log[]>([]);
@@ -194,6 +194,20 @@ export default function TodayScreen() {
           </View>
         </View>
 
+        {/* water points entry */}
+        <View style={styles.section}>
+          <Pressable testID="today-waterpoints" onPress={() => router.push("/water-points")} style={styles.wpCard}>
+            <View style={styles.wpCardIcon}>
+              <Ionicons name="location" size={22} color={colors.white} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.wpCardTitle}>{t("waterPoints.title")}</Text>
+              <Text style={styles.wpCardSub}>{t("waterPoints.subtitle")}</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+          </Pressable>
+        </View>
+
         {/* today's logs */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>{t("today.todayLogs")}</Text>
@@ -236,8 +250,6 @@ export default function TodayScreen() {
               ))
           )}
         </View>
-
-        <AdBanner />
       </ScrollView>
 
       {/* custom amount modal */}
@@ -334,6 +346,10 @@ const styles = StyleSheet.create({
     ...shadow.soft,
   },
   emptyText: { color: colors.textMuted, fontSize: font.small, textAlign: "center" },
+  wpCard: { flexDirection: "row", alignItems: "center", gap: spacing.md, backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.md, ...shadow.soft },
+  wpCardIcon: { width: 44, height: 44, borderRadius: radius.md, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
+  wpCardTitle: { fontSize: font.body, fontWeight: "800", color: colors.text },
+  wpCardSub: { fontSize: font.tiny, color: colors.textMuted, marginTop: 2 },
   logRow: {
     flexDirection: "row",
     alignItems: "center",
