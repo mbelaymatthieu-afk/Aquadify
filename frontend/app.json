@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mta.aquadify",
+      "bundleIdentifier": "com.mtagency.aquadify",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Show relevant ads in the free version",
         "NSLocationWhenInUseUsageDescription": "Find drinking fountains near you",
@@ -24,7 +24,7 @@
         "backgroundColor": "#2F6FD0"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.mta.aquadify"
+      "package": "com.mtagency.aquadify"
     },
     "web": {
       "bundler": "metro",
