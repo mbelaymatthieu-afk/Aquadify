@@ -33,3 +33,25 @@ export function computeDailyGoal(p: HydrationProfile): number {
   goal = Math.round(goal / 50) * 50;
   return Math.max(1200, Math.min(4000, goal));
 }
+
+// Extra hydration (ml) warranted by today's physical activity read from
+// Apple Health. ~+100 ml per 1000 steps above a 5000 baseline, plus
+// ~+50 ml per 100 kcal of active energy. Rounded to 50, capped at 1000.
+export function activityBonusMl(steps: number, activeEnergyKcal: number): number {
+  let bonus = 0;
+  if (steps > 5000) bonus += Math.floor((steps - 5000) / 1000) * 100;
+  bonus += Math.floor(activeEnergyKcal / 100) * 50;
+  bonus = Math.round(bonus / 50) * 50;
+  return Math.max(0, Math.min(1000, bonus));
+}
+
+// Suggested daily goal adapting the profile baseline to today's activity.
+export function suggestedGoalWithActivity(
+  p: HydrationProfile,
+  steps: number,
+  activeEnergyKcal: number,
+): number {
+  const base = computeDailyGoal(p);
+  const goal = base + activityBonusMl(steps, activeEnergyKcal);
+  return Math.max(1200, Math.min(4000, Math.round(goal / 50) * 50));
+}

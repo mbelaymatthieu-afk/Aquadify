@@ -3,7 +3,9 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -17,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useToast } from "@/src/components/Toast";
 import AdBanner from "@/src/components/AdBanner";
 import { api } from "@/src/api/client";
+import { deleteAccount } from "@/src/api/account";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { LANGS } from "@/src/i18n/translations";
@@ -45,8 +48,25 @@ export default function ProfileScreen() {
 
   const [goal, setGoal] = useState(user?.daily_goal_ml || 2000);
   const [saving, setSaving] = useState(false);
+  const [deleteStep, setDeleteStep] = useState(0); // 0 none, 1 first, 2 final
+  const [deleting, setDeleting] = useState(false);
 
   if (!user) return null;
+
+  const confirmDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteAccount(token);
+      setDeleteStep(0);
+      await logout();
+      toast.show(t("profile.deleteSuccess"), "success");
+      router.replace("/auth");
+    } catch {
+      toast.show(t("profile.deleteError"), "error");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const save = async (patch: any, successMsg?: string) => {
     setSaving(true);
@@ -306,8 +326,58 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
+        {/* danger zone */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>{t("profile.dangerZone")}</Text>
+          <View style={styles.card}>
+            <Pressable testID="delete-account-button" onPress={() => setDeleteStep(1)} style={styles.deleteRow}>
+              <Ionicons name="trash-outline" size={20} color={colors.danger} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.deleteLabel}>{t("profile.deleteAccount")}</Text>
+                <Text style={styles.rowHint}>{t("profile.deleteHint")}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.danger} />
+            </Pressable>
+          </View>
+        </View>
+
         <AdBanner />
       </ScrollView>
+
+      {/* Delete account — double confirmation */}
+      <Modal visible={deleteStep > 0} transparent animationType="fade" onRequestClose={() => setDeleteStep(0)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIcon}>
+              <Ionicons name="warning" size={28} color={colors.danger} />
+            </View>
+            <Text style={styles.modalTitle}>
+              {deleteStep === 1 ? t("profile.deleteTitle") : t("profile.deleteFinalTitle")}
+            </Text>
+            <Text style={styles.modalBody}>
+              {deleteStep === 1 ? t("profile.deleteBody") : t("profile.deleteFinalBody")}
+            </Text>
+
+            {deleteStep === 1 ? (
+              <Pressable testID="delete-continue" onPress={() => setDeleteStep(2)} style={styles.dangerBtn}>
+                <Text style={styles.dangerBtnText}>{t("profile.deleteContinue")}</Text>
+              </Pressable>
+            ) : (
+              <Pressable testID="delete-confirm" onPress={confirmDelete} disabled={deleting} style={styles.dangerBtn}>
+                {deleting ? (
+                  <ActivityIndicator color={colors.white} />
+                ) : (
+                  <Text style={styles.dangerBtnText}>{t("profile.deleteFinalCta")}</Text>
+                )}
+              </Pressable>
+            )}
+
+            <Pressable testID="delete-cancel" onPress={() => setDeleteStep(0)} disabled={deleting} style={styles.modalCancel}>
+              <Text style={styles.modalCancelText}>{t("common.cancel")}</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -449,4 +519,46 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   linkText: { flex: 1, fontSize: font.body, color: colors.text, fontWeight: "600" },
+  deleteRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, paddingVertical: 6 },
+  deleteLabel: { fontSize: font.body, color: colors.danger, fontWeight: "700" },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+  },
+  modalCard: {
+    width: "100%",
+    maxWidth: 420,
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    alignItems: "center",
+    ...shadow.card,
+  },
+  modalIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: "rgba(229,57,53,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+  },
+  modalTitle: { fontSize: font.h2, fontWeight: "800", color: colors.text, textAlign: "center" },
+  modalBody: { fontSize: font.small, color: colors.textMuted, textAlign: "center", marginTop: spacing.sm, lineHeight: 20 },
+  dangerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: colors.danger,
+    borderRadius: radius.pill,
+    minHeight: 52,
+    alignSelf: "stretch",
+    marginTop: spacing.lg,
+  },
+  dangerBtnText: { color: colors.white, fontSize: font.body, fontWeight: "800" },
+  modalCancel: { marginTop: spacing.md, paddingVertical: spacing.sm },
+  modalCancelText: { color: colors.textSecondary, fontSize: font.small, fontWeight: "700" },
 });

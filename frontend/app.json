@@ -13,7 +13,9 @@
       "bundleIdentifier": "com.mta.aquadify",
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Show relevant ads in the free version",
-        "NSLocationWhenInUseUsageDescription": "Find drinking fountains near you"
+        "NSLocationWhenInUseUsageDescription": "Find drinking fountains near you",
+        "NSHealthShareUsageDescription": "Adapt your water goal to your activity",
+        "NSHealthUpdateUsageDescription": "HealthKit requires this for permission prompts"
       }
     },
     "android": {
@@ -52,6 +54,16 @@
         {
           "androidAppId": "ca-app-pub-8009813538542789~7753483038",
           "iosAppId": "ca-app-pub-8009813538542789~7753483038"
+        }
+      ],
+      "expo-tracking-transparency",
+      "expo-iap",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "Adapt your water goal to your activity",
+          "NSHealthUpdateUsageDescription": "HealthKit requires this for permission prompts",
+          "background": false
         }
       ]
     ],

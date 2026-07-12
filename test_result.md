@@ -101,3 +101,67 @@
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+## user_problem_statement: iOS-only update — replace Stripe with Apple StoreKit 2 (expo-iap), real Apple HealthKit for Premium, real account deletion (double confirmation), ATT prompt + global Error Boundary. Native features must be guarded so the web preview never crashes.
+
+## frontend:
+##   - task: "Account deletion double-confirmation flow (profile.tsx)"
+##     implemented: true
+##     working: "NA"
+##     file: "app/(tabs)/profile.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Added Danger Zone -> Delete account button opening a Modal with step 1 (deleteTitle/deleteBody -> Continue) then step 2 (deleteFinalTitle -> Delete permanently). Calls DELETE /account on remote backend (endpoint NOT yet deployed -> will 404 and show deleteError toast). UI/modal flow is fully testable on web. testIDs: delete-account-button, delete-continue, delete-confirm, delete-cancel."
+##   - task: "Premium screen StoreKit(iOS)/Stripe(web) split (premium.tsx)"
+##     implemented: true
+##     working: "NA"
+##     file: "app/premium.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "On web (IAP_ENABLED=false) shows the existing Stripe CTA (testID premium-subscribe-button). StoreKit plan cards only render on iOS native build. Verify web still shows Stripe CTA and screen renders."
+##   - task: "Health screen HealthKit(iOS)/mock(web) (health.tsx)"
+##     implemented: true
+##     working: "NA"
+##     file: "app/health.tsx"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Free users see locked card + unlock CTA. Premium users on web see mocked connect flow (POST /health/connect). Real HealthKit only on iOS native. Verify locked state for free user."
+##   - task: "Global Error Boundary + ATT prompt (_layout.tsx)"
+##     implemented: true
+##     working: "NA"
+##     file: "app/_layout.tsx"
+##     stuck_count: 0
+##     priority: "medium"
+##     needs_retesting: true
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Wrapped app in ErrorBoundary; ATT requested before AdMob init (native no-op on web). Verify app boots normally."
+
+## metadata:
+##   created_by: "main_agent"
+##   version: "1.1"
+##   test_sequence: 6
+
+## test_plan:
+##   current_focus:
+##     - "Account deletion double-confirmation flow (profile.tsx)"
+##     - "Premium screen StoreKit(iOS)/Stripe(web) split (premium.tsx)"
+##   stuck_tasks: []
+##   test_all: false
+##   test_priority: "high_first"
+
+## agent_communication:
+##     -agent: "main"
+##     -message: "Iteration 6: iOS-native features (StoreKit via expo-iap, HealthKit) added behind Platform/appOwnership guards + platform-split lib files (iap.native/web, healthkit.native/web, tracking.native/web) so the web bundle never imports native modules. Please test FRONTEND ONLY on web: (1) login with mobiletest123@aqua.com / Test1234!, (2) Profile -> Danger Zone -> Delete account -> double confirmation modal (Continue then Delete permanently) — expect graceful error toast since remote DELETE /account is not deployed yet, (3) Premium screen renders with Stripe CTA on web, (4) Health screen shows locked card for free user. Do NOT attempt real payment. Native StoreKit/HealthKit cannot be tested on web (expected)."

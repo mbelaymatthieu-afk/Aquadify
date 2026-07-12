@@ -9,6 +9,8 @@ import { useToast } from "@/src/components/Toast";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
+import { HEALTH_ENABLED, TodayActivity, getTodayActivity, requestHealthAuth } from "@/src/lib/healthkit";
+import { suggestedGoalWithActivity } from "@/src/lib/hydration";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
 export default function HealthScreen() {
@@ -21,10 +23,25 @@ export default function HealthScreen() {
   const premium = !!user?.is_premium;
   const [connected, setConnected] = useState<boolean>(!!(user as any)?.health_connected);
   const [busy, setBusy] = useState(false);
+  const [activity, setActivity] = useState<TodayActivity | null>(null);
 
   const provider = Platform.OS === "ios" ? "apple_health" : "google_fit";
 
-  const connect = async () => {
+  const profile = () => {
+    const p = (user?.profile || {}) as any;
+    return {
+      weight: p.weight ?? 70,
+      age: p.age ?? 30,
+      sex: p.sex ?? "other",
+      activity: p.activity ?? "moderate",
+      climate: p.climate ?? "temperate",
+    };
+  };
+
+  const suggested = activity ? suggestedGoalWithActivity(profile(), activity.steps, activity.activeEnergyKcal) : null;
+
+  // Mocked backend connect flow (web / Android / Expo Go).
+  const connectMock = async () => {
     setBusy(true);
     try {
       const updated = await api.post("/health/connect", { provider }, token);
@@ -38,12 +55,64 @@ export default function HealthScreen() {
     }
   };
 
+  // Real Apple HealthKit flow (iOS native build).
+  const connectHealthKit = async () => {
+    setBusy(true);
+    try {
+      const ok = await requestHealthAuth();
+      if (!ok) {
+        toast.show(t("health.permNeeded"), "error");
+        return;
+      }
+      const data = await getTodayActivity();
+      setActivity(data);
+      setConnected(true);
+      // Best-effort persist the "connected" flag (backend is mocked).
+      try {
+        const updated = await api.post("/health/connect", { provider }, token);
+        setUser(updated);
+      } catch {
+        // ignore — connection still works locally
+      }
+      toast.show(t("health.connected"), "success");
+    } catch (e: any) {
+      toast.show(e?.message || t("auth.errGeneric"), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const refresh = async () => {
+    setBusy(true);
+    try {
+      const data = await getTodayActivity();
+      setActivity(data);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const applyGoal = async () => {
+    if (!suggested) return;
+    setBusy(true);
+    try {
+      const updated = await api.put("/settings", { daily_goal_ml: suggested }, token);
+      setUser(updated);
+      toast.show(t("health.applied"), "success");
+    } catch (e: any) {
+      toast.show(e?.message || t("auth.errGeneric"), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const disconnect = async () => {
     setBusy(true);
     try {
       const updated = await api.post("/health/disconnect", {}, token);
       setUser(updated);
       setConnected(false);
+      setActivity(null);
     } catch (e: any) {
       toast.show(e?.message || t("auth.errGeneric"), "error");
     } finally {
@@ -52,6 +121,14 @@ export default function HealthScreen() {
   };
 
   const benefits = [t("health.b1"), t("health.b2"), t("health.b3")];
+
+  const StatCard = ({ icon, value, label }: { icon: any; value: string; label: string }) => (
+    <View style={styles.statCard}>
+      <Ionicons name={icon} size={20} color={colors.primary} />
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
+    </View>
+  );
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.bg }]}>
@@ -88,6 +165,44 @@ export default function HealthScreen() {
               <Text style={styles.primaryBtnText}>{t("health.unlock")}</Text>
             </Pressable>
           </View>
+        ) : HEALTH_ENABLED && connected && activity ? (
+          <View style={styles.card} testID="health-connected">
+            <View style={styles.connectedRow}>
+              <Ionicons name="fitness" size={22} color={colors.success} />
+              <Text style={styles.connectedText}>{t("health.connected")}</Text>
+            </View>
+
+            <View style={styles.statsRow}>
+              <StatCard icon="walk" value={`${activity.steps}`} label={t("health.steps")} />
+              <StatCard icon="flame" value={`${activity.activeEnergyKcal}`} label={t("health.energy")} />
+              <StatCard icon="barbell" value={`${activity.workouts}`} label={t("health.workouts")} />
+            </View>
+
+            {suggested != null && (
+              <View style={styles.suggestBox}>
+                <Text style={styles.suggestLabel}>{t("health.suggested")}</Text>
+                <Text style={styles.suggestValue}>{suggested} ml</Text>
+              </View>
+            )}
+
+            <Pressable testID="health-apply" onPress={applyGoal} disabled={busy} style={styles.primaryBtn}>
+              {busy ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <>
+                  <Ionicons name="checkmark-done" size={18} color={colors.white} />
+                  <Text style={styles.primaryBtnText}>{t("health.apply")}</Text>
+                </>
+              )}
+            </Pressable>
+
+            <Pressable testID="health-refresh" onPress={refresh} disabled={busy} style={styles.ghostBtn}>
+              <Text style={styles.ghostBtnPrimary}>{t("health.refresh")}</Text>
+            </Pressable>
+            <Pressable testID="health-disconnect" onPress={disconnect} disabled={busy} style={styles.ghostBtn}>
+              <Text style={styles.ghostBtnText}>{t("health.disconnect")}</Text>
+            </Pressable>
+          </View>
         ) : connected ? (
           <View style={styles.card} testID="health-connected">
             <View style={styles.connectedRow}>
@@ -101,7 +216,12 @@ export default function HealthScreen() {
           </View>
         ) : (
           <View style={styles.card}>
-            <Pressable testID="health-connect" onPress={connect} disabled={busy} style={styles.primaryBtn}>
+            <Pressable
+              testID="health-connect"
+              onPress={HEALTH_ENABLED ? connectHealthKit : connectMock}
+              disabled={busy}
+              style={styles.primaryBtn}
+            >
               {busy ? (
                 <ActivityIndicator color={colors.white} />
               ) : (
@@ -138,7 +258,28 @@ const styles = StyleSheet.create({
   primaryBtnText: { color: colors.white, fontSize: font.body, fontWeight: "700" },
   connectedRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
   connectedText: { fontSize: font.h3, fontWeight: "800", color: colors.text },
+  statsRow: { flexDirection: "row", gap: spacing.sm, marginTop: spacing.md },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.cardAlt,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    alignItems: "center",
+    gap: 4,
+  },
+  statValue: { fontSize: font.h3, fontWeight: "800", color: colors.text },
+  statLabel: { fontSize: font.tiny, color: colors.textMuted, fontWeight: "600" },
+  suggestBox: {
+    marginTop: spacing.md,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+  },
+  suggestLabel: { fontSize: font.tiny, color: colors.primaryDark, fontWeight: "700", textTransform: "uppercase", letterSpacing: 1 },
+  suggestValue: { fontSize: font.hero, fontWeight: "800", color: colors.primaryDark, letterSpacing: -1 },
   note: { fontSize: font.tiny, color: colors.textMuted, marginTop: spacing.sm, lineHeight: 17 },
   ghostBtn: { marginTop: spacing.md, alignItems: "center", paddingVertical: spacing.sm },
   ghostBtnText: { color: colors.danger, fontWeight: "700", fontSize: font.small },
+  ghostBtnPrimary: { color: colors.primary, fontWeight: "700", fontSize: font.small },
 });

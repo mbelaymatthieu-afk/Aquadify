@@ -4,12 +4,14 @@ import { useEffect } from "react";
 import { LogBox } from "react-native";
 
 import { initAds } from "@/src/lib/ads";
+import { requestTrackingPermission } from "@/src/lib/tracking";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { AuthProvider } from "@/src/context/AuthContext";
 import { ToastProvider } from "@/src/components/Toast";
+import { ErrorBoundary } from "@/src/components/ErrorBoundary";
 import { I18nProvider } from "@/src/i18n";
 import { useIconFonts } from "@/src/hooks/use-icon-fonts";
 
@@ -32,9 +34,13 @@ export default function RootLayout() {
     }
   }, [loaded, error]);
 
-  // Initialize the AdMob SDK at launch (native builds only; no-op in Expo Go/web).
+  // Ask for App Tracking Transparency (iOS) BEFORE initializing AdMob, then
+  // initialize the SDK. Both are native-build-only no-ops in Expo Go/web.
   useEffect(() => {
-    initAds();
+    (async () => {
+      await requestTrackingPermission();
+      initAds();
+    })();
   }, []);
 
   // If the CDN is unreachable we fall through on error rather than wedging
@@ -42,18 +48,20 @@ export default function RootLayout() {
   if (!loaded && !error) return null;
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <KeyboardProvider>
-          <I18nProvider>
-            <AuthProvider>
-              <ToastProvider>
-                <Stack screenOptions={{ headerShown: false }} />
-              </ToastProvider>
-            </AuthProvider>
-          </I18nProvider>
-        </KeyboardProvider>
-      </SafeAreaProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <SafeAreaProvider>
+          <KeyboardProvider>
+            <I18nProvider>
+              <AuthProvider>
+                <ToastProvider>
+                  <Stack screenOptions={{ headerShown: false }} />
+                </ToastProvider>
+              </AuthProvider>
+            </I18nProvider>
+          </KeyboardProvider>
+        </SafeAreaProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   );
 }
