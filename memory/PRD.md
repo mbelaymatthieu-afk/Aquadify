@@ -76,6 +76,16 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 ## Personas
 - Health-conscious user tracking daily water intake with gentle AI coaching and gamification.
 
+## Iteration 2026-07-12 (soir) — iOS natif : StoreKit 2, HealthKit réel, Suppression compte, ATT, ErrorBoundary
+- StoreKit 2 (expo-iap 4.4.0) : premium.tsx affiche les formules Mensuel/Annuel (IDs `com.mtagency.aquadify.premium.monthly|yearly`), achat via requestPurchase + purchaseUpdatedListener, finishTransaction, restauration (restorePurchases + hasActiveSubscriptions). Après achat -> POST /iap/verify (remote, à déployer) sinon déblocage optimiste. Repli Stripe conservé sur web/Android (testID premium-subscribe-button).
+- HealthKit réel (@kingstinct/react-native-healthkit 14.0.2) : health.tsx pour Premium iOS -> requestAuthorization(steps/activeEnergy/workouts), lecture du jour, objectif suggéré (suggestedGoalWithActivity dans lib/hydration.ts) + bouton Appliquer (PUT /settings). Repli mock /health/connect sur web/Android.
+- Suppression de compte (App Store 5.1.1(v)) : profile.tsx Zone sensible -> Modal double confirmation -> DELETE /account (remote, à déployer). Testé web : dégrade proprement (toast erreur) car endpoint absent.
+- ATT (expo-tracking-transparency) : requestTrackingPermission() avant initAds() dans _layout.tsx (natif only).
+- ErrorBoundary global (src/components/ErrorBoundary.tsx) autour de _layout.
+- Guards : fichiers .native/.web (iap, healthkit, tracking) -> bundle web ne charge JAMAIS les modules natifs. Vérifié testing_agent iteration_6 (frontend 16/16).
+- Plugins app.json ajoutés : expo-tracking-transparency, expo-iap, @kingstinct/react-native-healthkit (+ Info.plist HealthKit). expo-dev-client installé.
+- À FAIRE PAR L'UTILISATEUR : déployer les 2 endpoints (voir /app/backend/DEPLOY_TO_REMOTE.md) sur drip-track1 ; générer un build iOS (StoreKit/HealthKit/ATT/AdMob non testables en Expo Go/web) ; vérifier bundleIdentifier (com.mta.aquadify) vs préfixe produits (com.mtagency).
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
