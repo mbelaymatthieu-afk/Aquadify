@@ -86,6 +86,12 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - Plugins app.json ajoutés : expo-tracking-transparency, expo-iap, @kingstinct/react-native-healthkit (+ Info.plist HealthKit). expo-dev-client installé.
 - À FAIRE PAR L'UTILISATEUR : déployer les 2 endpoints (voir /app/backend/DEPLOY_TO_REMOTE.md) sur drip-track1 ; générer un build iOS (StoreKit/HealthKit/ATT/AdMob non testables en Expo Go/web) ; vérifier bundleIdentifier (com.mta.aquadify) vs préfixe produits (com.mtagency).
 
+## Iteration 2026-07-15 — UX Premium, Notifications variées, Points d'eau Premium
+- Premium (premium.tsx) : cartes Mensuel/Annuel avec prix Apple + période (perMonth/perYear), badge "Meilleure offre" sur l'annuel. Déblocage immédiat après achat (verify ou optimiste) + overlay animé PremiumSuccess (checkmark + "Félicitations, vous êtes désormais Premium !") puis retour auto (2,2s). Bouton "Restaurer les achats" rendu discret en bas de page, iOS uniquement.
+- Notifications (src/lib/reminderMessages.ts) : ~26 messages variés/langue (motivation, santé, sport, chaleur, humour, conseils). scheduleHydrationReminders(s, lang) assigne un message aléatoire distinct par créneau (Fisher–Yates, réutilisation minimale). profile.tsx passe désormais `lang`.
+- Points d'eau (water-points.tsx) : RÉSERVÉ Premium (carte cadenas wp-locked + CTA wp-unlock -> /premium ; cadenas aussi sur le lien Profil). Après localisation : top 3 les plus proches (déjà triés), chacun avec distance exacte + temps à pied (geo.formatWalkTime, ~5 km/h) + bouton itinéraire. Message clair si aucun point.
+- Vérifié testing_agent iteration_7 (web 100%). Non testable sur web : overlay succès + variété notifs (iOS/natif).
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
