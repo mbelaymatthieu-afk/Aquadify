@@ -12,3 +12,9 @@ export function haversine(lat1: number, lon1: number, lat2: number, lon2: number
 export function formatDistance(m: number): string {
   return m < 1000 ? `${Math.round(m)} m` : `${(m / 1000).toFixed(1)} km`;
 }
+
+// Estimated walking time at ~5 km/h (83 m/min). Returns "< 1 min" or "N min".
+export function formatWalkTime(m: number): string {
+  const min = Math.round(m / 83);
+  return min <= 1 ? "< 1 min" : `${min} min`;
+}

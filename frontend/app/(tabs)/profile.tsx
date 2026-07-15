@@ -101,7 +101,7 @@ export default function ProfileScreen() {
         reminder_start: s.reminder_start,
         reminder_end: s.reminder_end,
       },
-      t("today.subtitle"),
+      lang,
     );
   };
 
@@ -297,6 +297,7 @@ export default function ProfileScreen() {
             <Pressable testID="link-waterpoints" onPress={() => router.push("/water-points")} style={styles.linkRow}>
               <Ionicons name="location-outline" size={20} color={colors.primary} />
               <Text style={styles.linkText}>{t("waterPoints.title")}</Text>
+              {!user.is_premium && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
             <Pressable

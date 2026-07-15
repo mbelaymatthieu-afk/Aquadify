@@ -19,7 +19,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import WaterMap from "@/src/components/WaterMap";
 import { useToast } from "@/src/components/Toast";
 import { fetchWaterPoints, WaterPoint } from "@/src/api/waterpoints";
-import { formatDistance } from "@/src/lib/geo";
+import { formatDistance, formatWalkTime } from "@/src/lib/geo";
+import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
@@ -30,12 +31,16 @@ export default function WaterPointsScreen() {
   const router = useRouter();
   const { t } = useI18n();
   const toast = useToast();
+  const { user } = useAuth();
+  const premium = !!user?.is_premium;
 
   const [status, setStatus] = useState<Status>("idle");
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [points, setPoints] = useState<WaterPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [reportFor, setReportFor] = useState<WaterPoint | null>(null);
+
+  const top3 = points.slice(0, 3);
 
   const loadPoints = useCallback(async () => {
     setLoading(true);
@@ -92,7 +97,19 @@ export default function WaterPointsScreen() {
         </View>
       </LinearGradient>
 
-      {status !== "granted" ? (
+      {!premium ? (
+        <View style={styles.gate} testID="wp-locked">
+          <View style={styles.gateIcon}>
+            <Ionicons name="lock-closed" size={34} color={colors.primary} />
+          </View>
+          <Text style={styles.gateTitle}>{t("waterPoints.lockedTitle")}</Text>
+          <Text style={styles.gateBody}>{t("waterPoints.lockedBody")}</Text>
+          <Pressable testID="wp-unlock" onPress={() => router.push("/premium")} style={styles.primaryBtn}>
+            <Ionicons name="sparkles" size={18} color={colors.white} />
+            <Text style={styles.primaryBtnText}>{t("waterPoints.unlock")}</Text>
+          </Pressable>
+        </View>
+      ) : status !== "granted" ? (
         <View style={styles.gate} testID="wp-permission-gate">
           <View style={styles.gateIcon}>
             <Ionicons name="location" size={34} color={colors.primary} />
@@ -117,7 +134,7 @@ export default function WaterPointsScreen() {
       ) : (
         <>
           <View style={styles.mapWrap}>
-            {coords && <WaterMap lat={coords.lat} lon={coords.lon} points={points} onSelect={openDirections} />}
+            {coords && <WaterMap lat={coords.lat} lon={coords.lon} points={top3} onSelect={openDirections} />}
             <Text style={styles.attribution}>{t("waterPoints.attribution")}</Text>
           </View>
 
@@ -127,32 +144,43 @@ export default function WaterPointsScreen() {
                 <ActivityIndicator color={colors.primary} />
                 <Text style={styles.muted}>{t("waterPoints.loading")}</Text>
               </View>
-            ) : points.length === 0 ? (
+            ) : top3.length === 0 ? (
               <Text style={styles.muted}>{t("waterPoints.empty")}</Text>
             ) : (
-              points.map((p) => (
-                <View key={p.id} style={styles.card} testID={`wp-item-${p.id}`}>
-                  <View style={styles.wpIcon}>
-                    <MaterialCommunityIcons
-                      name={p.type === "fountain" ? "fountain" : "water"}
-                      size={22}
-                      color={colors.primary}
-                    />
+              <>
+                <Text style={styles.nearestTitle}>{t("waterPoints.nearest")}</Text>
+                {top3.map((p) => (
+                  <View key={p.id} style={styles.card} testID={`wp-item-${p.id}`}>
+                    <View style={styles.wpIcon}>
+                      <MaterialCommunityIcons
+                        name={p.type === "fountain" ? "fountain" : "water"}
+                        size={22}
+                        color={colors.primary}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.wpName} numberOfLines={1}>
+                        {p.name || t(`waterPoints.${p.type}`)}
+                      </Text>
+                      <View style={styles.wpMetaRow}>
+                        <Ionicons name="location-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.wpDist}>{formatDistance(p.distance)}</Text>
+                        <Text style={styles.wpDot}>•</Text>
+                        <Ionicons name="walk-outline" size={13} color={colors.textMuted} />
+                        <Text style={styles.wpDist}>
+                          {formatWalkTime(p.distance)} {t("waterPoints.walk")}
+                        </Text>
+                      </View>
+                    </View>
+                    <Pressable testID={`wp-dir-${p.id}`} onPress={() => openDirections(p)} style={styles.iconBtn}>
+                      <Ionicons name="navigate" size={18} color={colors.white} />
+                    </Pressable>
+                    <Pressable testID={`wp-report-${p.id}`} onPress={() => setReportFor(p)} style={styles.reportBtn}>
+                      <Ionicons name="flag-outline" size={18} color={colors.danger} />
+                    </Pressable>
                   </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.wpName} numberOfLines={1}>
-                      {p.name || t(`waterPoints.${p.type}`)}
-                    </Text>
-                    <Text style={styles.wpDist}>{formatDistance(p.distance)}</Text>
-                  </View>
-                  <Pressable testID={`wp-dir-${p.id}`} onPress={() => openDirections(p)} style={styles.iconBtn}>
-                    <Ionicons name="navigate" size={18} color={colors.white} />
-                  </Pressable>
-                  <Pressable testID={`wp-report-${p.id}`} onPress={() => setReportFor(p)} style={styles.reportBtn}>
-                    <Ionicons name="flag-outline" size={18} color={colors.danger} />
-                  </Pressable>
-                </View>
-              ))
+                ))}
+              </>
             )}
           </ScrollView>
         </>
@@ -196,7 +224,18 @@ const styles = StyleSheet.create({
   card: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, ...shadow.soft },
   wpIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   wpName: { fontSize: font.body, fontWeight: "700", color: colors.text },
+  wpMetaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   wpDist: { fontSize: font.tiny, color: colors.textMuted },
+  wpDot: { fontSize: font.tiny, color: colors.textMuted, marginHorizontal: 2 },
+  nearestTitle: {
+    fontSize: font.tiny,
+    fontWeight: "800",
+    color: colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xs,
+  },
   iconBtn: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
   reportBtn: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" },
   modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: "flex-end" },

@@ -7,6 +7,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Mascot } from "@/src/components/Mascot";
+import { PremiumSuccess } from "@/src/components/PremiumSuccess";
 import { useToast } from "@/src/components/Toast";
 import { api } from "@/src/api/client";
 import { verifyIapPurchase } from "@/src/api/account";
@@ -16,7 +17,6 @@ import { colors, font, radius, shadow, spacing } from "@/src/theme";
 import {
   IAP_ENABLED,
   IapProduct,
-  SKU_YEARLY,
   addPurchaseListeners,
   finishPurchase,
   getSubscriptions,
@@ -34,6 +34,7 @@ export default function PremiumScreen() {
   const { token, user, setUser, refreshUser } = useAuth();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // --- StoreKit (iOS) ---
   const [products, setProducts] = useState<IapProduct[]>([]);
@@ -53,8 +54,7 @@ export default function PremiumScreen() {
       // user isn't blocked. Source of truth becomes the backend once deployed.
       if (user) setUser({ ...user, is_premium: true });
     }
-    toast.show(t("premium.success"), "success");
-    router.back();
+    setShowSuccess(true);
   };
 
   useEffect(() => {
@@ -129,8 +129,7 @@ export default function PremiumScreen() {
         const s = await api.get(`/payments/checkout/status/${sessionId}`, token);
         if (s.payment_status === "paid" || s.status === "complete") {
           await refreshUser();
-          toast.show(t("premium.success"), "success");
-          router.back();
+          setShowSuccess(true);
           return;
         }
       } catch {
@@ -221,17 +220,17 @@ export default function PremiumScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={styles.planPrice}>{p.displayPrice}</Text>
+                    <View style={styles.planPriceCol}>
+                      <Text style={styles.planPrice}>{p.displayPrice}</Text>
+                      <Text style={styles.planPeriod}>
+                        {isYearly(p.id) ? t("premium.perYear") : t("premium.perMonth")}
+                      </Text>
+                    </View>
                   </Pressable>
                 ))
               )}
 
               {busy && <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.primary} />}
-
-              <Pressable testID="premium-restore" onPress={restore} disabled={busy} style={styles.restoreBtn}>
-                <Ionicons name="refresh" size={16} color={colors.primary} />
-                <Text style={styles.restoreText}>{t("premium.restore")}</Text>
-              </Pressable>
             </>
           ) : (
             <Pressable
@@ -251,7 +250,15 @@ export default function PremiumScreen() {
             </Pressable>
           )}
         </View>
+
+        {IAP_ENABLED && (
+          <Pressable testID="premium-restore" onPress={restore} disabled={busy} style={styles.restoreBtnBottom}>
+            <Text style={styles.restoreTextBottom}>{t("premium.restore")}</Text>
+          </Pressable>
+        )}
       </ScrollView>
+
+      {showSuccess && <PremiumSuccess message={t("premium.congrats")} onDone={() => router.back()} />}
     </LinearGradient>
   );
 }
@@ -309,15 +316,20 @@ const styles = StyleSheet.create({
   },
   badgeText: { color: colors.white, fontSize: 10, fontWeight: "800" },
   planPrice: { fontSize: font.h3, fontWeight: "800", color: colors.primaryDark },
-  restoreBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.xs,
-    marginTop: spacing.sm,
+  planPriceCol: { alignItems: "flex-end" },
+  planPeriod: { fontSize: font.tiny, color: colors.textMuted, fontWeight: "600" },
+  restoreBtnBottom: {
+    alignSelf: "center",
+    marginTop: spacing.lg,
     paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
-  restoreText: { color: colors.primary, fontSize: font.small, fontWeight: "700" },
+  restoreTextBottom: {
+    color: "rgba(255,255,255,0.75)",
+    fontSize: font.tiny,
+    fontWeight: "600",
+    textDecorationLine: "underline",
+  },
   cta: {
     flexDirection: "row",
     alignItems: "center",
