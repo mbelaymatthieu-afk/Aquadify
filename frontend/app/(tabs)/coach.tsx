@@ -58,7 +58,11 @@ export default function CoachScreen() {
     }, [load]),
   );
 
-  const limitReached = !isPremium && used >= limit;
+  // Premium is unlocked if the backend says so OR the device holds an active
+  // StoreKit subscription (merged into the auth user). Keeps Aquacoach unlimited
+  // right after an in-app purchase, even before the backend /iap/verify deploy.
+  const isPremiumEffective = isPremium || !!user?.is_premium;
+  const limitReached = !isPremiumEffective && used >= limit;
 
   const send = async () => {
     const text = input.trim();
@@ -158,7 +162,7 @@ export default function CoachScreen() {
           </View>
         ) : (
           <View style={[styles.inputBar, { paddingBottom: insets.bottom > 0 ? insets.bottom : spacing.sm }]}>
-            {!isPremium && (
+            {!isPremiumEffective && (
               <Text style={styles.left}>{t("coach.messagesLeft", { n: left })}</Text>
             )}
             <View style={styles.inputRow}>

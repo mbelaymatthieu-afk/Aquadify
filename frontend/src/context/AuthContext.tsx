@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 import { api } from "@/src/api/client";
+import { hasActive } from "@/src/lib/iap";
 import { storage } from "@/src/utils/storage";
 
 const TOKEN_KEY = "aquadify_token";
@@ -47,6 +48,20 @@ const AuthContext = createContext<AuthValue>({} as AuthValue);
 
 WebBrowser.maybeCompleteAuthSession();
 
+// Merge the device's StoreKit entitlement into the user. On iOS, an active
+// subscription unlocks Premium even if the (remote) backend hasn't recorded it
+// yet — StoreKit current entitlements are the on-device source of truth and
+// work offline. Returns free if no active subscription (no stale caching).
+async function applyLocalPremium(u: AquaUser): Promise<AquaUser> {
+  if (u.is_premium) return u;
+  try {
+    if (await hasActive()) return { ...u, is_premium: true };
+  } catch {
+    // ignore — treat as free
+  }
+  return u;
+}
+
 function parseSessionId(url: string): string | null {
   try {
     const hashPart = url.includes("#") ? url.split("#")[1] : "";
@@ -75,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const me = await api.get<AquaUser>("/auth/me", saved);
           setToken(saved);
-          setUser(me);
+          setUser(await applyLocalPremium(me));
         } catch {
           await storage.secureRemove(TOKEN_KEY);
         }
@@ -87,7 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const persist = async (data: { token: string; user: AquaUser }) => {
     await storage.secureSet(TOKEN_KEY, data.token);
     setToken(data.token);
-    setUser(data.user);
+    setUser(await applyLocalPremium(data.user));
   };
 
   const login = async (email: string, password: string) => {
@@ -144,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = async () => {
     if (!token) return;
     const me = await api.get<AquaUser>("/auth/me", token);
-    setUser(me);
+    setUser(await applyLocalPremium(me));
   };
 
   return (
