@@ -182,6 +182,9 @@ export const dict: Record<Lang, any> = {
       congrats: "Félicitations, vous êtes désormais Premium !",
       perMonth: "/ mois",
       perYear: "/ an",
+      trialBadge: "7 jours offerts",
+      trialNote: "7 jours d'essai gratuit, puis renouvellement automatique. Vous ne serez facturé qu'à la fin de l'essai, sauf résiliation avant.",
+      cancelNote: "Vous pouvez résilier votre abonnement à tout moment depuis les réglages de votre compte Apple.",
     },
     waterPoints: {
       title: "Points d'eau à proximité",
@@ -431,6 +434,9 @@ export const dict: Record<Lang, any> = {
       congrats: "Congratulations, you're now Premium!",
       perMonth: "/ mo",
       perYear: "/ yr",
+      trialBadge: "7-day free trial",
+      trialNote: "7-day free trial, then auto-renews. You won't be charged until the trial ends, unless you cancel before.",
+      cancelNote: "You can cancel your subscription anytime in your Apple account settings.",
     },
     waterPoints: {
       title: "Water points nearby",
@@ -680,6 +686,9 @@ export const dict: Record<Lang, any> = {
       congrats: "¡Enhorabuena, ya eres Premium!",
       perMonth: "/ mes",
       perYear: "/ año",
+      trialBadge: "7 días gratis",
+      trialNote: "7 días de prueba gratis, luego renovación automática. No se te cobrará hasta que termine la prueba, salvo que canceles antes.",
+      cancelNote: "Puedes cancelar tu suscripción cuando quieras desde los ajustes de tu cuenta Apple.",
     },
     waterPoints: {
       title: "Puntos de agua cercanos",

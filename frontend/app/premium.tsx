@@ -85,7 +85,7 @@ export default function PremiumScreen() {
         setBusy(false);
         const code = err?.code || "";
         if (code !== "E_USER_CANCELLED" && code !== "user_cancelled") {
-          toast.show(t("premium.failed"), "info");
+          toast.show(err?.message || t("premium.failed"), "error");
         }
       },
     );
@@ -101,9 +101,9 @@ export default function PremiumScreen() {
     setBusy(true);
     try {
       await requestSubscription(sku);
-    } catch {
+    } catch (e: any) {
       setBusy(false);
-      toast.show(t("premium.failed"), "info");
+      toast.show(e?.message || t("premium.failed"), "error");
     }
   };
 
@@ -214,11 +214,18 @@ export default function PremiumScreen() {
                       <Text style={styles.planTitle}>
                         {isYearly(p.id) ? t("premium.yearly") : t("premium.monthly")}
                       </Text>
-                      {isYearly(p.id) && (
-                        <View style={styles.badge}>
-                          <Text style={styles.badgeText}>{t("premium.bestValue")}</Text>
-                        </View>
-                      )}
+                      <View style={styles.badgeRow}>
+                        {isYearly(p.id) && (
+                          <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{t("premium.bestValue")}</Text>
+                          </View>
+                        )}
+                        {p.hasFreeTrial && (
+                          <View style={styles.trialBadge}>
+                            <Text style={styles.trialBadgeText}>{t("premium.trialBadge")}</Text>
+                          </View>
+                        )}
+                      </View>
                     </View>
                     <View style={styles.planPriceCol}>
                       <Text style={styles.planPrice}>{p.displayPrice}</Text>
@@ -231,6 +238,11 @@ export default function PremiumScreen() {
               )}
 
               {busy && <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.primary} />}
+
+              {products.some((p) => p.hasFreeTrial) && (
+                <Text style={styles.trialNote}>{t("premium.trialNote")}</Text>
+              )}
+              <Text style={styles.cancelNote}>{t("premium.cancelNote")}</Text>
             </>
           ) : (
             <Pressable
@@ -315,6 +327,29 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   badgeText: { color: colors.white, fontSize: 10, fontWeight: "800" },
+  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
+  trialBadge: {
+    alignSelf: "flex-start",
+    backgroundColor: colors.success,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 2,
+  },
+  trialBadgeText: { color: colors.white, fontSize: 10, fontWeight: "800" },
+  trialNote: {
+    fontSize: font.tiny,
+    color: colors.textSecondary,
+    marginTop: spacing.md,
+    lineHeight: 17,
+    textAlign: "center",
+  },
+  cancelNote: {
+    fontSize: font.tiny,
+    color: colors.textMuted,
+    marginTop: spacing.sm,
+    lineHeight: 16,
+    textAlign: "center",
+  },
   planPrice: { fontSize: font.h3, fontWeight: "800", color: colors.primaryDark },
   planPriceCol: { alignItems: "flex-end" },
   planPeriod: { fontSize: font.tiny, color: colors.textMuted, fontWeight: "600" },

@@ -14,6 +14,7 @@ export type IapProduct = {
   id: string;
   title: string;
   displayPrice: string;
+  hasFreeTrial: boolean;
   raw: any;
 };
 
@@ -46,12 +47,20 @@ export async function getSubscriptions(): Promise<IapProduct[]> {
   if (!IAP_ENABLED) return [];
   try {
     const products = await iap().fetchProducts({ skus: PRODUCT_IDS, type: "subs" });
-    return (products ?? []).map((p: any) => ({
-      id: p.id ?? p.productId,
-      title: p.title ?? p.displayName ?? p.id,
-      displayPrice: p.displayPrice ?? p.localizedPrice ?? p.price ?? "",
-      raw: p,
-    }));
+    return (products ?? []).map((p: any) => {
+      const mode =
+        p.introductoryPricePaymentModeIOS ??
+        p.subscriptionInfoIOS?.introductoryOffer?.paymentMode ??
+        "";
+      const hasFreeTrial = String(mode).toLowerCase().includes("free");
+      return {
+        id: p.id ?? p.productId,
+        title: p.title ?? p.displayName ?? p.id,
+        displayPrice: p.displayPrice ?? p.localizedPrice ?? p.price ?? "",
+        hasFreeTrial,
+        raw: p,
+      };
+    });
   } catch {
     return [];
   }

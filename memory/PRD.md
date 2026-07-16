@@ -92,6 +92,16 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - Points d'eau (water-points.tsx) : RÉSERVÉ Premium (carte cadenas wp-locked + CTA wp-unlock -> /premium ; cadenas aussi sur le lien Profil). Après localisation : top 3 les plus proches (déjà triés), chacun avec distance exacte + temps à pied (geo.formatWalkTime, ~5 km/h) + bouton itinéraire. Message clair si aucun point.
 - Vérifié testing_agent iteration_7 (web 100%). Non testable sur web : overlay succès + variété notifs (iOS/natif).
 
+## Iteration 2026-07-16 — Essai gratuit 7j, note résiliation, robustesse abonnement annuel, audit complet
+- Premium (premium.tsx) : détection de l'essai gratuit via champs iOS (`introductoryPricePaymentModeIOS` / `subscriptionInfoIOS.introductoryOffer.paymentMode` = 'free-trial') → badge vert "7 jours offerts" sur chaque plan concerné + note `trialNote` (facturation seulement à la fin de l'essai) + note `cancelNote` (résiliation via réglages compte Apple). i18n fr/en/es.
+- Robustesse annuel : buy() et purchaseErrorListener affichent désormais le message d'erreur StoreKit réel (au lieu d'un générique) pour diagnostiquer l'échec annuel sur TestFlight. Le code d'achat est identique pour mensuel/annuel (requestPurchase apple.sku, type subs) → un échec annuel isolé est quasi toujours une config App Store Connect (produit annuel non "Ready to Submit", hors même groupe d'abonnement, ou intro offer manquante).
+- AUDIT complet : toutes les fonctionnalités présentes — onglets index/progress(Aquanalyse)/coach(Aquacoach)/profile ; écrans water-points (Premium, top 3 + distance + temps à pied + itinéraire), health, premium, privacy, onboarding, auth. Aucune suppression.
+- iap.native/web : IapProduct + champ hasFreeTrial.
+
+## RAPPEL App Store Connect (côté utilisateur, hors code)
+- Abonnement ANNUEL `com.mtagency.aquadify.premium.yearly` : doit être "Ready to Submit"/approuvé, DANS LE MÊME groupe d'abonnement que le mensuel, contrats payants actifs. Sinon fetchProducts ne le renvoie pas / requestPurchase échoue.
+- Essai gratuit 7 jours : créer un "Introductory Offer" gratuit d'1 semaine sur CHAQUE abonnement (mensuel + annuel). L'app affiche alors automatiquement le badge/essai.
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.

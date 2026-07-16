@@ -12,6 +12,7 @@ export type IapProduct = {
   id: string;
   title: string;
   displayPrice: string;
+  hasFreeTrial: boolean;
   raw: any;
 };
 
