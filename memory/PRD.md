@@ -102,6 +102,11 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - Abonnement ANNUEL `com.mtagency.aquadify.premium.yearly` : doit être "Ready to Submit"/approuvé, DANS LE MÊME groupe d'abonnement que le mensuel, contrats payants actifs. Sinon fetchProducts ne le renvoie pas / requestPurchase échoue.
 - Essai gratuit 7 jours : créer un "Introductory Offer" gratuit d'1 semaine sur CHAQUE abonnement (mensuel + annuel). L'app affiche alors automatiquement le badge/essai.
 
+## Iteration 2026-07-16 (b) — Fix déblocage Premium post-achat + audit anti-régression
+- BUG utilisateur : après achat StoreKit, Premium ne se débloquait pas (backend /iap/verify non déployé → is_premium restait false au reload). FIX : `applyLocalPremium()` dans AuthContext fusionne l'entitlement StoreKit de l'appareil (hasActive() iOS) dans user.is_premium à l'init/refresh/persist → Premium déverrouillé depuis l'abonnement de l'appareil, sans backend. Coach : `isPremiumEffective = serverPremium || user.is_premium`.
+- AUDIT testing_agent iteration_8 : ZÉRO occurrence "Coach IA"/"Analyse IA" ; 4 onglets OK ; Aquacoach/Aquanalyse/Points d'eau tous présents. La plainte "anciens affichages" = build installé OBSOLÈTE (le code/preview a tout). → l'utilisateur doit régénérer/réinstaller le build iOS.
+- Non testable sur web : hasActive()=false (iOS natif requis).
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
