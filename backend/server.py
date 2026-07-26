@@ -153,6 +153,91 @@ def compute_score(req: InsightsRequest):
     return score, adj_goal, reasons
 
 
+def _extract_json(raw: str):
+    """Best-effort parse of an LLM response into a dict."""
+    import json as _json
+    if not raw:
+        return None
+    s = raw.strip()
+    if s.startswith("```"):
+        s = s.strip("`")
+        if s.lower().startswith("json"):
+            s = s[4:]
+    # Try direct, then the first balanced {...} block.
+    for candidate in (s, s[s.find("{"): s.rfind("}") + 1] if "{" in s and "}" in s else ""):
+        if not candidate:
+            continue
+        try:
+            return _json.loads(candidate)
+        except Exception:
+            continue
+    return None
+
+
+def _fallback_insights(req: "InsightsRequest", score: int, adj_goal: int):
+    """Deterministic, contextual insights when the LLM output is unusable.
+    Guarantees a non-empty, personalized result built from the real numbers."""
+    lang = req.language if req.language in ("fr", "en", "es") else "fr"
+    h = req.health
+    consumed = int(req.consumed_today or 0)
+    remaining = max(0, adj_goal - consumed)
+    steps = int((h.steps if h else 0) or 0)
+    temp = (h.temperature_c if h else None)
+    sleep = (h.sleep_hours if h else None)
+
+    T = {
+        "fr": {
+            "summary": f"Score d'hydratation {score}/100 — il vous reste {remaining} ml pour atteindre votre objectif du jour.",
+            "remaining": (f"Buvez encore {remaining} ml d'ici ce soir.", f"Vous êtes à {consumed} ml sur un objectif ajusté de {adj_goal} ml."),
+            "steps": (f"Ajoutez un grand verre après votre activité.", f"Vos {steps} pas aujourd'hui ont augmenté vos pertes en eau."),
+            "heat": ("Gardez de l'eau à portée de main.", f"Il fait {round(temp) if temp else ''}°C : la chaleur accélère la déshydratation."),
+            "sleep": ("Commencez la matinée par un grand verre d'eau.", f"Nuit courte ({round(sleep,1) if sleep else ''} h) : l'hydratation aide à réduire la fatigue."),
+            "regular": ("Espacez vos prises d'eau toutes les heures.", "Une hydratation régulière vaut mieux qu'une grande quantité d'un coup."),
+            "reach_no": f"À ce rythme, l'objectif de {adj_goal} ml risque de ne pas être atteint : buvez un verre maintenant.",
+            "reach_yes": "Vous êtes en bonne voie pour atteindre votre objectif, continuez ainsi !",
+        },
+        "en": {
+            "summary": f"Hydration score {score}/100 — {remaining} ml left to reach today's goal.",
+            "remaining": (f"Drink {remaining} ml more before tonight.", f"You're at {consumed} ml of an adjusted {adj_goal} ml goal."),
+            "steps": ("Add a large glass after your activity.", f"Your {steps} steps today increased water loss."),
+            "heat": ("Keep water within reach.", f"It's {round(temp) if temp else ''}°C: heat speeds up dehydration."),
+            "sleep": ("Start the morning with a big glass of water.", f"Short night ({round(sleep,1) if sleep else ''} h): hydration helps reduce fatigue."),
+            "regular": ("Space your intake every hour.", "Regular sips beat one big gulp."),
+            "reach_no": f"At this pace you may miss the {adj_goal} ml goal: drink a glass now.",
+            "reach_yes": "You're on track to reach your goal, keep it up!",
+        },
+        "es": {
+            "summary": f"Puntuación de hidratación {score}/100 — te faltan {remaining} ml para tu objetivo de hoy.",
+            "remaining": (f"Bebe {remaining} ml más antes de la noche.", f"Vas por {consumed} ml de un objetivo ajustado de {adj_goal} ml."),
+            "steps": ("Añade un vaso grande tras tu actividad.", f"Tus {steps} pasos de hoy aumentaron la pérdida de agua."),
+            "heat": ("Ten agua a mano.", f"Hace {round(temp) if temp else ''}°C: el calor acelera la deshidratación."),
+            "sleep": ("Empieza la mañana con un buen vaso de agua.", f"Noche corta ({round(sleep,1) if sleep else ''} h): la hidratación ayuda a reducir la fatiga."),
+            "regular": ("Reparte la ingesta cada hora.", "Beber a sorbos regulares es mejor que de golpe."),
+            "reach_no": f"A este ritmo podrías no alcanzar los {adj_goal} ml: bebe un vaso ahora.",
+            "reach_yes": "Vas por buen camino para alcanzar tu objetivo, ¡sigue así!",
+        },
+    }[lang]
+
+    tips = []
+    if remaining > 0:
+        tips.append({"text": T["remaining"][0], "reason": T["remaining"][1]})
+    if steps > 8000:
+        tips.append({"text": T["steps"][0], "reason": T["steps"][1]})
+    if temp is not None and temp >= 28:
+        tips.append({"text": T["heat"][0], "reason": T["heat"][1]})
+    if sleep is not None and sleep < 6:
+        tips.append({"text": T["sleep"][0], "reason": T["sleep"][1]})
+    if (req.logs_today or 0) < 3:
+        tips.append({"text": T["regular"][0], "reason": T["regular"][1]})
+    if not tips:
+        tips.append({"text": T["regular"][0], "reason": T["regular"][1]})
+
+    frac_day = min(1.0, max(0.0, (req.hour_of_day - 8) / 14))
+    on_track = adj_goal <= 0 or (consumed / adj_goal) >= max(0.15, frac_day * 0.9)
+    prediction = T["reach_yes"] if on_track else T["reach_no"]
+    return {"summary": T["summary"], "tips": tips[:3], "prediction": prediction}
+
+
 @api_router.post("/insights")
 async def hydration_insights(req: InsightsRequest):
     import json as _json
@@ -168,7 +253,8 @@ async def hydration_insights(req: InsightsRequest):
         "NON-medical guidance. Never give generic advice like 'drink a glass at wake up' or 'carry a bottle'. "
         "Every tip MUST reference the user's actual numbers and explain WHY. Vary wording so it feels fresh each day. "
         f"Always answer in {lang_name}. "
-        "Return ONLY valid minified JSON with EXACTLY this shape: "
+        "Return ONLY valid minified JSON (double-quoted keys/strings, no trailing commas, no newlines inside strings) "
+        "with EXACTLY this shape: "
         '{"summary":"one motivating sentence <=160 chars that mentions the score",'
         '"tips":[{"text":"specific actionable tip <=120 chars","reason":"short why <=120 chars, cite a metric"}],'
         '"prediction":"1 sentence: will they reach the goal by end of day given pace/time/activity, + one concrete action"}. '
@@ -195,42 +281,48 @@ async def hydration_insights(req: InsightsRequest):
     }
     user_msg = "User context (JSON):\n" + _json.dumps(context, ensure_ascii=False)
 
-    try:
-        chat = LlmChat(api_key=key, session_id=f"insights-{uuid.uuid4().hex[:8]}", system_message=system)
-        chat.with_model("openai", "gpt-4o-mini")
-        text = await chat.send_message(UserMessage(text=user_msg))
-        raw = (text or "").strip()
-        if raw.startswith("```"):
-            raw = raw.strip("`")
-            if raw.lower().startswith("json"):
-                raw = raw[4:]
-        data = _json.loads(raw)
-        tips = []
-        for tp in data.get("tips", [])[:3]:
-            if isinstance(tp, dict) and tp.get("text"):
-                tips.append({"text": str(tp["text"]), "reason": str(tp.get("reason", ""))})
-            elif isinstance(tp, str):
-                tips.append({"text": tp, "reason": ""})
+    data = None
+    for _ in range(2):  # one retry on unparseable output
+        try:
+            chat = LlmChat(api_key=key, session_id=f"insights-{uuid.uuid4().hex[:8]}", system_message=system)
+            chat.with_model("openai", "gpt-4o-mini")
+            text = await chat.send_message(UserMessage(text=user_msg))
+            data = _extract_json(text or "")
+            if data and isinstance(data.get("tips"), list) and len(data["tips"]) > 0:
+                break
+            data = None
+        except Exception as e:
+            logger.error(f"insights LLM error: {e}")
+            data = None
+
+    if not data:
+        fb = _fallback_insights(req, score, adj_goal)
         return {
             "score": score,
             "adjusted_goal": adj_goal,
             "score_reasons": reasons,
-            "summary": data.get("summary", ""),
-            "tips": tips,
-            "prediction": data.get("prediction", ""),
+            "summary": fb["summary"],
+            "tips": fb["tips"],
+            "prediction": fb["prediction"],
         }
-    except Exception as e:
-        logger.error(f"insights error: {e}")
-        # Still return the deterministic score even if the LLM fails.
-        return {
-            "score": score,
-            "adjusted_goal": adj_goal,
-            "score_reasons": reasons,
-            "summary": "",
-            "tips": [],
-            "prediction": "",
-            "error": True,
-        }
+
+    tips = []
+    for tp in data.get("tips", [])[:3]:
+        if isinstance(tp, dict) and tp.get("text"):
+            tips.append({"text": str(tp["text"]), "reason": str(tp.get("reason", ""))})
+        elif isinstance(tp, str):
+            tips.append({"text": tp, "reason": ""})
+    if not tips:
+        fb = _fallback_insights(req, score, adj_goal)
+        tips = fb["tips"]
+    return {
+        "score": score,
+        "adjusted_goal": adj_goal,
+        "score_reasons": reasons,
+        "summary": data.get("summary", "") or _fallback_insights(req, score, adj_goal)["summary"],
+        "tips": tips,
+        "prediction": data.get("prediction", ""),
+    }
 
 
 # Include the router in the main app

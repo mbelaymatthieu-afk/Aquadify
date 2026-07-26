@@ -107,15 +107,15 @@ export default function ProgressScreen() {
           health,
           language: lang,
         });
-        if (data && !data.error && (data.summary || (data.tips || []).length || data.score != null)) {
-          setInsights(data);
-        } else if (data && data.score != null) {
+        if (data && (data.tips?.length || data.score != null)) {
           setInsights(data);
         } else {
           setInsightsError(true);
+          insightsOnce.current = false; // allow retry on next focus
         }
       } catch {
         setInsightsError(true);
+        insightsOnce.current = false; // allow retry on next focus
       } finally {
         setInsightsLoading(false);
       }

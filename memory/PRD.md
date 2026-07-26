@@ -107,6 +107,16 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - AUDIT testing_agent iteration_8 : ZÉRO occurrence "Coach IA"/"Analyse IA" ; 4 onglets OK ; Aquacoach/Aquanalyse/Points d'eau tous présents. La plainte "anciens affichages" = build installé OBSOLÈTE (le code/preview a tout). → l'utilisateur doit régénérer/réinstaller le build iOS.
 - Non testable sur web : hasActive()=false (iOS natif requis).
 
+## Iteration 2026-07-26 — Aquanalyse intelligent (Apple Santé + score /100) & fix définitif Points d'eau
+### Points d'eau (fix définitif)
+- CAUSE RACINE : overpass-api.de renvoyait HTTP 406 sans en-tête User-Agent → l'app affichait "Aucun point d'eau". `src/api/waterpoints.ts` réécrit : en-tête User-Agent obligatoire, requêtes `nwr` (node/way/relation) `out center`, tags étendus (amenity=drinking_water/water_point, drinking_water=yes, man_made=water_tap, fountain=drinking, natural=spring+drinking_water), rayons progressifs 10/25/50 km, 3 miroirs Overpass, logs détaillés, distinction erreur réseau vs vide réel. Validé curl : 80 résultats à Paris.
+- water-points.tsx : état d'erreur distinct ("fetchError" + bouton Réessayer), top 3 + distance + temps à pied + itinéraire (https maps.apple/google), modal détail (nom/adresse/distance) au tap. Fix http→https.
+### Aquanalyse (IA + Apple Santé)
+- healthkit.native.ts : `getHealthSnapshot()` lit pas, distance, énergie active/totale, FC, FC repos, HRV, respiration, SpO2, étages, stand, poids, IMC, sommeil (catégorie), séances (nb/durée/type). Tous optionnels/guardés iOS.
+- backend `/api/insights` : score déterministe /100 (hydratation ajustée activité+météo, régularité, sommeil, FC, chaleur) + `score_reasons` ; IA (gpt-4o-mini) génère résumé + 3 conseils {text,reason} + prédiction. ROBUSTESSE : `_extract_json` (fences + bloc {} équilibré), retry x1, **fallback déterministe FR/EN/ES** garantissant conseils jamais vides. Testé 8/8 pytest + self-test UI OK.
+- progress.tsx : badge score /100 (couleur selon niveau), raisons, résumé, conseils avec explication, prédiction (Premium), retry sur échec. insights.ts + payload enrichi (consumed_today, logs_today, last_intake_hours, hour_of_day, health snapshot).
+- À DÉPLOYER par l'utilisateur sur drip-track1 (prod) : `/api/insights` enrichi (réf. server.py + DEPLOY_TO_REMOTE.md §3). Métriques Santé = build iOS natif uniquement.
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
