@@ -38,12 +38,15 @@ export default function WaterPointsScreen() {
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
   const [points, setPoints] = useState<WaterPoint[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [reportFor, setReportFor] = useState<WaterPoint | null>(null);
+  const [detailFor, setDetailFor] = useState<WaterPoint | null>(null);
 
   const top3 = points.slice(0, 3);
 
   const loadPoints = useCallback(async () => {
     setLoading(true);
+    setError(false);
     try {
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const lat = pos.coords.latitude;
@@ -51,12 +54,13 @@ export default function WaterPointsScreen() {
       setCoords({ lat, lon });
       const pts = await fetchWaterPoints(lat, lon);
       setPoints(pts);
-    } catch {
-      toast.show(t("waterPoints.empty"), "info");
+    } catch (e: any) {
+      console.log("[waterpoints] load error:", e?.message);
+      setError(true);
     } finally {
       setLoading(false);
     }
-  }, [t, toast]);
+  }, []);
 
   const requestLocation = useCallback(async () => {
     const cur = await Location.getForegroundPermissionsAsync();
@@ -73,7 +77,7 @@ export default function WaterPointsScreen() {
   const openDirections = (p: WaterPoint) => {
     const url =
       Platform.OS === "ios"
-        ? `http://maps.apple.com/?daddr=${p.lat},${p.lon}`
+        ? `https://maps.apple.com/?daddr=${p.lat},${p.lon}`
         : `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
     Linking.openURL(url);
   };
@@ -144,8 +148,17 @@ export default function WaterPointsScreen() {
                 <ActivityIndicator color={colors.primary} />
                 <Text style={styles.muted}>{t("waterPoints.loading")}</Text>
               </View>
+            ) : error ? (
+              <View style={styles.loadingBox} testID="wp-error">
+                <Ionicons name="cloud-offline-outline" size={30} color={colors.textMuted} />
+                <Text style={styles.muted}>{t("waterPoints.fetchError")}</Text>
+                <Pressable testID="wp-retry" onPress={loadPoints} style={styles.retryBtn}>
+                  <Ionicons name="refresh" size={16} color={colors.white} />
+                  <Text style={styles.retryText}>{t("common.retry")}</Text>
+                </Pressable>
+              </View>
             ) : top3.length === 0 ? (
-              <Text style={styles.muted}>{t("waterPoints.empty")}</Text>
+              <Text style={styles.muted} testID="wp-empty">{t("waterPoints.empty")}</Text>
             ) : (
               <>
                 <Text style={styles.nearestTitle}>{t("waterPoints.nearest")}</Text>
@@ -158,7 +171,7 @@ export default function WaterPointsScreen() {
                         color={colors.primary}
                       />
                     </View>
-                    <View style={{ flex: 1 }}>
+                    <Pressable style={{ flex: 1 }} testID={`wp-info-${p.id}`} onPress={() => setDetailFor(p)}>
                       <Text style={styles.wpName} numberOfLines={1}>
                         {p.name || t(`waterPoints.${p.type}`)}
                       </Text>
@@ -171,7 +184,7 @@ export default function WaterPointsScreen() {
                           {formatWalkTime(p.distance)} {t("waterPoints.walk")}
                         </Text>
                       </View>
-                    </View>
+                    </Pressable>
                     <Pressable testID={`wp-dir-${p.id}`} onPress={() => openDirections(p)} style={styles.iconBtn}>
                       <Ionicons name="navigate" size={18} color={colors.white} />
                     </Pressable>
@@ -196,6 +209,47 @@ export default function WaterPointsScreen() {
                 <Text style={styles.sheetRowText}>{t(`waterPoints.${k}`)}</Text>
               </Pressable>
             ))}
+          </View>
+        </Pressable>
+      </Modal>
+
+      <Modal visible={!!detailFor} transparent animationType="fade" onRequestClose={() => setDetailFor(null)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setDetailFor(null)}>
+          <View style={styles.sheet} testID="wp-detail-sheet">
+            <View style={styles.detailHeader}>
+              <View style={styles.wpIcon}>
+                <MaterialCommunityIcons
+                  name={detailFor?.type === "fountain" ? "fountain" : "water"}
+                  size={22}
+                  color={colors.primary}
+                />
+              </View>
+              <Text style={styles.sheetTitle}>
+                {detailFor?.name || (detailFor ? t(`waterPoints.${detailFor.type}`) : "")}
+              </Text>
+            </View>
+            {!!detailFor?.address && (
+              <Text style={styles.detailLine}>
+                <Text style={styles.detailLabel}>{t("waterPoints.addressLabel")}: </Text>
+                {detailFor.address}
+              </Text>
+            )}
+            {!!detailFor && (
+              <Text style={styles.detailLine}>
+                {formatDistance(detailFor.distance)} • {formatWalkTime(detailFor.distance)} {t("waterPoints.walk")}
+              </Text>
+            )}
+            <Pressable
+              testID="wp-detail-directions"
+              onPress={() => {
+                if (detailFor) openDirections(detailFor);
+                setDetailFor(null);
+              }}
+              style={styles.primaryBtn}
+            >
+              <Ionicons name="navigate" size={18} color={colors.white} />
+              <Text style={styles.primaryBtnText}>{t("waterPoints.directions")}</Text>
+            </Pressable>
           </View>
         </Pressable>
       </Modal>
@@ -241,6 +295,21 @@ const styles = StyleSheet.create({
   modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: "flex-end" },
   sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, paddingBottom: spacing.xxl },
   sheetTitle: { fontSize: font.h3, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
+  detailHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
+  detailLine: { fontSize: font.small, color: colors.textSecondary, marginBottom: spacing.sm, lineHeight: 20 },
+  detailLabel: { fontWeight: "800", color: colors.text },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    paddingHorizontal: spacing.lg,
+    minHeight: 44,
+    justifyContent: "center",
+  },
+  retryText: { color: colors.white, fontWeight: "700", fontSize: font.small },
   sheetRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
   sheetRowText: { fontSize: font.body, color: colors.text, fontWeight: "600" },
 });

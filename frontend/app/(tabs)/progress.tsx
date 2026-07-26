@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api/client";
 import AdBanner from "@/src/components/AdBanner";
 import { fetchInsights, Insights } from "@/src/api/insights";
+import { HEALTH_ENABLED, getHealthSnapshot } from "@/src/lib/healthkit";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
@@ -60,17 +61,55 @@ export default function ProgressScreen() {
       setInsightsLoading(true);
       setInsightsError(false);
       try {
+        // Today's hydration (consumption, regularity, recency).
+        let consumed = 0;
+        let logsToday = 0;
+        let lastIntakeHours: number | null = null;
+        try {
+          const today: any = await api.get("/hydration/today", token);
+          consumed = today?.total_ml || 0;
+          const logs: any[] = today?.logs || [];
+          logsToday = logs.length;
+          if (logs.length) {
+            const times = logs
+              .map((l) => new Date(l.timestamp).getTime())
+              .filter((n) => !Number.isNaN(n));
+            if (times.length) {
+              lastIntakeHours =
+                Math.round(((Date.now() - Math.max(...times)) / 3600000) * 10) / 10;
+            }
+          }
+        } catch {
+          // ignore — fall back to history-derived total below
+        }
+
+        // Apple Health snapshot (iOS native only; {} elsewhere).
+        let health = {};
+        try {
+          if (HEALTH_ENABLED) health = await getHealthSnapshot();
+        } catch {
+          health = {};
+        }
+
         const data = await fetchInsights({
           goal: user?.daily_goal_ml || 2000,
+          consumed_today: consumed,
+          logs_today: logsToday,
+          last_intake_hours: lastIntakeHours,
+          hour_of_day: new Date().getHours(),
           average: h?.average || 0,
           days_achieved: h?.days_achieved || 0,
           total_days: h?.total_days || 7,
           current_streak: g?.current_streak || 0,
           best_streak: g?.best_streak || 0,
           recent: (h?.data || []).slice(-7),
+          activity_trend: [],
+          health,
           language: lang,
         });
-        if (data && !data.error && (data.summary || (data.tips || []).length)) {
+        if (data && !data.error && (data.summary || (data.tips || []).length || data.score != null)) {
+          setInsights(data);
+        } else if (data && data.score != null) {
           setInsights(data);
         } else {
           setInsightsError(true);
@@ -81,7 +120,7 @@ export default function ProgressScreen() {
         setInsightsLoading(false);
       }
     },
-    [user?.daily_goal_ml, lang],
+    [user?.daily_goal_ml, lang, token],
   );
 
   const load = useCallback(async () => {
@@ -255,14 +294,55 @@ export default function ProgressScreen() {
               <Text style={styles.insightMuted}>{t("insights.error")}</Text>
             ) : insights ? (
               <>
+                {insights.score != null && (
+                  <View style={styles.scoreRow} testID="insights-score">
+                    <View
+                      style={[
+                        styles.scoreBadge,
+                        {
+                          backgroundColor:
+                            insights.score >= 80
+                              ? colors.success
+                              : insights.score >= 50
+                                ? colors.primary
+                                : colors.warning,
+                        },
+                      ]}
+                    >
+                      <Text style={styles.scoreValue}>{insights.score}</Text>
+                      <Text style={styles.scoreMax}>/100</Text>
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.scoreLabel}>{t("insights.scoreLabel")}</Text>
+                      {!!insights.score_reasons?.length && (
+                        <Text style={styles.scoreReasons} numberOfLines={2}>
+                          {insights.score_reasons.join(" · ")}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                )}
+
                 {!!insights.summary && <Text style={styles.insightSummary}>{insights.summary}</Text>}
+
                 {visibleTips.map((tip, i) => (
                   <View key={i} style={styles.tipRow} testID={`insight-tip-${i}`}>
                     <Ionicons name="water" size={16} color={colors.primary} style={{ marginTop: 2 }} />
-                    <Text style={styles.tipText}>{tip}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.tipText}>{tip.text}</Text>
+                      {!!tip.reason && <Text style={styles.tipReason}>{tip.reason}</Text>}
+                    </View>
                   </View>
                 ))}
-                {!premium && (insights.tips?.length || 0) > visibleTips.length && (
+
+                {premium && !!insights.prediction && (
+                  <View style={styles.predictionBox} testID="insights-prediction">
+                    <Ionicons name="trending-up" size={16} color={colors.primaryDark} style={{ marginTop: 2 }} />
+                    <Text style={styles.predictionText}>{insights.prediction}</Text>
+                  </View>
+                )}
+
+                {!premium && (
                   <Pressable testID="insights-unlock" onPress={() => router.push("/premium")} style={styles.lockedBox}>
                     <Ionicons name="lock-closed" size={18} color={colors.primary} />
                     <View style={{ flex: 1 }}>
@@ -388,7 +468,37 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   tipRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.sm },
-  tipText: { flex: 1, fontSize: font.small, color: colors.textSecondary, lineHeight: 20 },
+  tipText: { flex: 1, fontSize: font.small, color: colors.text, lineHeight: 20, fontWeight: "600" },
+  tipReason: { fontSize: font.tiny, color: colors.textMuted, lineHeight: 17, marginTop: 2 },
+  scoreRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  scoreBadge: {
+    width: 68,
+    height: 68,
+    borderRadius: radius.pill,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scoreValue: { color: colors.white, fontSize: font.h2, fontWeight: "800", lineHeight: 28 },
+  scoreMax: { color: "rgba(255,255,255,0.85)", fontSize: 10, fontWeight: "700", marginTop: -2 },
+  scoreLabel: { fontSize: font.body, fontWeight: "800", color: colors.text },
+  scoreReasons: { fontSize: font.tiny, color: colors.textMuted, marginTop: 2, lineHeight: 16 },
+  predictionBox: {
+    flexDirection: "row",
+    gap: spacing.sm,
+    backgroundColor: colors.primarySoft,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginTop: spacing.xs,
+  },
+  predictionText: { flex: 1, fontSize: font.small, color: colors.primaryDark, lineHeight: 20, fontWeight: "600" },
   lockedBox: {
     flexDirection: "row",
     alignItems: "center",

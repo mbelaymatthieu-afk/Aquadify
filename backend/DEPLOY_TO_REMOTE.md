@@ -80,3 +80,30 @@ async def iap_verify(req: IapVerifyRequest, current_user = Depends(get_current_u
 Après ajout de ces endpoints, redéployez le backend drip-track1. L'app mobile
 appelle déjà `DELETE /account` et `POST /iap/verify` ; en attendant le déploiement,
 elle affiche un message d'erreur clair (endpoint introuvable).
+
+---
+
+## 3) POST /api/insights — Aquanalyse (IA + score /100)
+
+L'app appelle cet endpoint pour Aquanalyse. En dev il est servi par le backend
+local `/app/backend/server.py` (déjà à jour). Pour la PRODUCTION, copiez la
+logique de `server.py` (classes `HealthSnapshot`, `InsightsRequest`, fonctions
+`_activity_bonus_ml`, `compute_score`, et la route `POST /api/insights`) dans le
+backend drip-track1, en réutilisant votre `EMERGENT_LLM_KEY`.
+
+Body (extrait) :
+```json
+{
+  "goal": 2500, "consumed_today": 1200, "logs_today": 4,
+  "last_intake_hours": 1.5, "hour_of_day": 15,
+  "average": 1900, "days_achieved": 4, "total_days": 7,
+  "current_streak": 3, "best_streak": 9,
+  "recent": [{"date":"2026-07-20","total":2100,"goal":2500}],
+  "activity_trend": [],
+  "health": {"steps":15300,"active_energy":620,"sleep_hours":5.5,"resting_heart_rate":58,"temperature_c":31},
+  "language": "fr"
+}
+```
+Réponse : `{ score, adjusted_goal, score_reasons, summary, tips:[{text,reason}], prediction }`.
+
+Sans ce déploiement, Aquanalyse se dégrade proprement en prod (message d'erreur).
