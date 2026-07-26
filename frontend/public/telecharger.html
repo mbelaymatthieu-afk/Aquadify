@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>Téléchargez Aquadify</title>
+  <meta name="description" content="Aquadify, votre assistant d'hydratation intelligent, arrive bientôt sur iPhone et Android." />
+  <meta name="theme-color" content="#2E90E6" />
+  <!-- Open Graph -->
+  <meta property="og:title" content="Téléchargez Aquadify" />
+  <meta property="og:description" content="Votre assistant d'hydratation intelligent arrive bientôt sur iPhone et Android." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://aquadify.com/telecharger" />
+
+  <!-- ============================================================
+       LIENS DES BOUTIQUES — À MODIFIER PLUS TARD (laisser "" tant
+       que l'application n'est pas publiée). Ne jamais mettre de faux
+       lien. Le QR code (https://aquadify.com/telecharger) ne change pas.
+       ============================================================ -->
+  <script>
+    var APP_STORE_URL = "";      // ex: "https://apps.apple.com/app/idXXXXXXXXX"
+    var GOOGLE_PLAY_URL = "";    // ex: "https://play.google.com/store/apps/details?id=com.mtagency.aquadify"
+  </script>
+
+  <style>
+    :root {
+      --blue: #2E90E6;
+      --blue-dark: #1B6FC0;
+      --ink: #0F2540;
+      --muted: #5B7086;
+      --card: #FFFFFF;
+      --line: #E3ECF5;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: var(--ink);
+      background: linear-gradient(160deg, #EAF4FE 0%, #D6EAFB 45%, #C3E0FA 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 18px calc(24px + env(safe-area-inset-bottom));
+    }
+    .card {
+      width: 100%;
+      max-width: 440px;
+      background: var(--card);
+      border-radius: 28px;
+      padding: 36px 26px 30px;
+      box-shadow: 0 24px 60px rgba(27, 111, 192, 0.18);
+      text-align: center;
+    }
+    .logo {
+      width: 96px; height: 96px;
+      margin: 0 auto 18px;
+      display: block;
+      filter: drop-shadow(0 10px 18px rgba(46,144,230,0.35));
+    }
+    h1 {
+      font-size: 26px;
+      line-height: 1.2;
+      margin: 0 0 10px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+    }
+    .lede {
+      font-size: 16px;
+      color: var(--muted);
+      margin: 0 0 6px;
+      line-height: 1.5;
+    }
+    .status {
+      display: inline-block;
+      margin: 14px 0 6px;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--blue-dark);
+      background: #EAF4FE;
+      border: 1px solid var(--line);
+      padding: 8px 16px;
+      border-radius: 999px;
+    }
+    .features {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.6;
+      margin: 16px 4px 22px;
+    }
+    .stores {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 0 auto 22px;
+      max-width: 320px;
+    }
+    .store {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 13px 18px;
+      border-radius: 16px;
+      background: var(--ink);
+      color: #fff;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform .12s ease, opacity .12s ease;
+      position: relative;
+      min-height: 60px;
+    }
+    .store.active:hover { transform: translateY(-2px); }
+    .store.disabled {
+      background: #E8EEF5;
+      color: #9AAAB9;
+      cursor: default;
+    }
+    .store .ico { width: 26px; height: 26px; flex: 0 0 26px; }
+    .store .txt { text-align: left; line-height: 1.15; flex: 1; }
+    .store .small { display: block; font-size: 11px; font-weight: 600; opacity: .85; }
+    .store .big { display: block; font-size: 17px; font-weight: 800; }
+    .badge-soon {
+      position: absolute;
+      right: 14px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 11px;
+      font-weight: 800;
+      color: var(--blue-dark);
+      background: #fff;
+      border: 1px solid var(--line);
+      padding: 4px 9px;
+      border-radius: 999px;
+    }
+    .store.disabled .big, .store.disabled .small { color: #7C8DA0; }
+    .contact {
+      font-size: 14px;
+      color: var(--muted);
+      margin: 4px 0 0;
+    }
+    .contact a { color: var(--blue-dark); text-decoration: none; font-weight: 700; }
+    .foot {
+      margin-top: 22px;
+      font-size: 12px;
+      color: #9AAAB9;
+    }
+    @media (max-width: 360px) {
+      h1 { font-size: 23px; }
+      .card { padding: 28px 18px 24px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <!-- Logo Aquadify (goutte d'eau, SVG inline autonome) -->
+    <svg class="logo" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Aquadify">
+      <defs>
+        <linearGradient id="g" x1="30" y1="8" x2="72" y2="92" gradientUnits="userSpaceOnUse">
+          <stop stop-color="#5BB4F5"/>
+          <stop offset="1" stop-color="#1B6FC0"/>
+        </linearGradient>
+      </defs>
+      <path d="M50 6C50 6 84 44 84 66C84 84.7 68.7 96 50 96C31.3 96 16 84.7 16 66C16 44 50 6 50 6Z" fill="url(#g)"/>
+      <ellipse cx="38" cy="42" rx="9" ry="14" fill="#fff" opacity="0.35" transform="rotate(-20 38 42)"/>
+    </svg>
+
+    <h1>Téléchargez Aquadify</h1>
+    <p class="lede">Votre assistant d'hydratation intelligent arrive bientôt sur iPhone et Android.</p>
+
+    <div id="status" class="status">Bientôt disponible</div>
+
+    <p class="features">Recevez des rappels personnalisés, suivez votre consommation d'eau et adaptez votre hydratation à votre activité.</p>
+
+    <div class="stores" id="stores"><!-- boutons injectés en JS --></div>
+
+    <p class="contact">Une question ? <a href="mailto:contact@aquadify.com">contact@aquadify.com</a></p>
+    <p class="foot">© <span id="year"></span> Aquadify</p>
+  </main>
+
+  <script>
+    (function () {
+      document.getElementById("year").textContent = new Date().getFullYear();
+
+      var ua = navigator.userAgent || navigator.vendor || "";
+      var isIOS = /iPad|iPhone|iPod/.test(ua) ||
+        (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1); // iPadOS
+      var isAndroid = /android/i.test(ua);
+
+      // --- Redirection automatique : uniquement si le lien existe VRAIMENT ---
+      // location.replace évite toute boucle / entrée dans l'historique.
+      if (isIOS && APP_STORE_URL) { location.replace(APP_STORE_URL); return; }
+      if (isAndroid && GOOGLE_PLAY_URL) { location.replace(GOOGLE_PLAY_URL); return; }
+
+      // --- Message d'état selon l'appareil ---
+      var statusEl = document.getElementById("status");
+      if (isIOS) statusEl.textContent = "Aquadify arrive bientôt sur l'App Store";
+      else if (isAndroid) statusEl.textContent = "Aquadify arrive bientôt sur Google Play";
+      else statusEl.textContent = "Bientôt disponible sur iPhone et Android";
+
+      // --- Icônes ---
+      var appleIco = '<svg class="ico" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M16.365 1.43c0 1.14-.417 2.2-1.11 2.98-.83.94-2.19 1.66-3.34 1.57-.14-1.13.43-2.31 1.09-3.05.75-.85 2.06-1.5 3.02-1.5.03.02.03.02.34 0zM20.99 17.02c-.55 1.27-.81 1.84-1.52 2.96-.99 1.56-2.39 3.5-4.12 3.51-1.54.02-1.94-1-4.03-.99-2.09.01-2.53 1.01-4.07.99-1.73-.02-3.05-1.77-4.04-3.33C-.34 16.9-.6 11.87 1.06 9.2c1.17-1.9 3.02-3.01 4.76-3.01 1.77 0 2.88 1 4.34 1 1.42 0 2.28-1 4.33-1 1.55 0 3.2.85 4.37 2.3-3.84 2.11-3.22 7.6.13 8.53z"/></svg>';
+      var playIco = '<svg class="ico" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M3.6 2.1c-.3.2-.5.6-.5 1.1v17.6c0 .5.2.9.5 1.1l10-9.9-10-9.9z" fill="#00D2FF"/><path d="M17.3 8.9 5.8 2.3 3.6 2.1l10 9.9 3.7-3.1z" fill="#00F076"/><path d="m13.6 12 3.7 3.1 3.2-1.8c.9-.5.9-1.9 0-2.4l-3.2-1.9-3.7 3z" fill="#FFCE00"/><path d="m3.6 21.9 10-9.9 3.7 3.1-11.5 6.6c-.7.4-1.5.4-2.2.2z" fill="#FF3C4C"/></svg>';
+
+      function buildStore(opts) {
+        var soon = '<span class="badge-soon">Bientôt disponible</span>';
+        if (opts.url) {
+          return '<a class="store active" href="' + opts.url + '" rel="noopener">' +
+            opts.ico +
+            '<span class="txt"><span class="small">' + opts.small + '</span>' +
+            '<span class="big">' + opts.big + '</span></span></a>';
+        }
+        // Pas de lien officiel -> élément NON cliquable (pas de href, pas de faux lien).
+        return '<div class="store disabled" aria-disabled="true">' +
+          opts.ico +
+          '<span class="txt"><span class="small">' + opts.small + '</span>' +
+          '<span class="big">' + opts.big + '</span></span>' + soon + '</div>';
+      }
+
+      var storesEl = document.getElementById("stores");
+      var html = "";
+      // Sur iOS on met l'App Store en premier, sur Android Google Play en premier.
+      var apple = buildStore({ url: APP_STORE_URL, ico: appleIco, small: "Télécharger sur l'", big: "App Store" });
+      var play = buildStore({ url: GOOGLE_PLAY_URL, ico: playIco, small: "Disponible sur", big: "Google Play" });
+      html = isAndroid ? (play + apple) : (apple + play);
+      storesEl.innerHTML = html;
+    })();
+  </script>
+</body>
+</html>
