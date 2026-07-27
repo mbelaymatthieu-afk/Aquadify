@@ -37,7 +37,15 @@ type AuthValue = {
   user: AquaUser | null;
   token: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  register: (
+    name: string,
+    email: string,
+    password: string,
+  ) => Promise<{ requiresVerification: boolean; email: string }>;
+  verifyEmail: (email: string, code: string) => Promise<boolean>;
+  resendVerification: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
+  resetPassword: (email: string, code: string, password: string) => Promise<void>;
   googleLogin: () => Promise<boolean>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -114,12 +122,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const data = await api.post<{ token: string; user: AquaUser }>("/auth/register", {
-      name,
-      email,
-      password,
-    });
-    await persist(data);
+    const data = await api.post<{ token?: string; user?: AquaUser; requires_verification?: boolean }>(
+      "/auth/register",
+      { name, email, password },
+    );
+    // New backend: no token, verification required -> caller routes to verify screen.
+    if (data?.requires_verification || !data?.token) {
+      return { requiresVerification: true, email };
+    }
+    // Legacy backend: returns token immediately -> log in as before.
+    await persist(data as { token: string; user: AquaUser });
+    return { requiresVerification: false, email };
+  };
+
+  const verifyEmail = async (email: string, code: string): Promise<boolean> => {
+    const data = await api.post<{ token?: string; user?: AquaUser; ok?: boolean }>(
+      "/auth/verify-email",
+      { email, code },
+    );
+    if (data?.token && data?.user) {
+      await persist({ token: data.token, user: data.user });
+      return true; // auto-logged in
+    }
+    return false; // verified, but caller must send user to login
+  };
+
+  const resendVerification = async (email: string) => {
+    await api.post("/auth/resend-verification", { email });
+  };
+
+  const forgotPassword = async (email: string) => {
+    await api.post("/auth/forgot-password", { email });
+  };
+
+  const resetPassword = async (email: string, code: string, password: string) => {
+    await api.post("/auth/reset-password", { email, code, password });
   };
 
   const googleLogin = async (): Promise<boolean> => {
@@ -164,7 +201,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ loading, user, token, login, register, googleLogin, logout, refreshUser, setUser }}
+      value={{
+        loading,
+        user,
+        token,
+        login,
+        register,
+        verifyEmail,
+        resendVerification,
+        forgotPassword,
+        resetPassword,
+        googleLogin,
+        logout,
+        refreshUser,
+        setUser,
+      }}
     >
       {children}
     </AuthContext.Provider>

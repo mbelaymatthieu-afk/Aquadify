@@ -1,0 +1,32 @@
+{
+  "summary": "Frontend-only auth-hardening validation on Expo web preview (390x844) against DEPLOYED drip-track1 backend. ALL 6 requested scenarios PASS. (1) NON-REGRESSION LOGIN: CGU accept -> login mobiletest123@aqua.com/Test1234! -> lands on '/' home with 4 tabs (Bonjour Mobile, 0/2450 ml, Ajout rapide visible). (2) SIGNUP CLIENT VALIDATION: toggle -> auth-name-input + password-rules + auth-confirm-input all render; weak pwd 'abc' triggers error toast and blocks submit (stays on /auth); typing 'Abcd1234' populates all 4 rule labels; mismatched confirm shows inline fieldError 'Les mots de passe ne correspondent pas.' AND blocks submit; empty submit shows 'Veuillez remplir tous les champs' toast. (3) SIGNUP HAPPY PATH: created e1test<ts>@aqua.com with Abcd1234 -> current remote backend returned a token -> user routed to /onboarding (legacy flow, backward-compatible path executed correctly, no verify screen, no crash). (4) FORGOT-PASSWORD: auth-forgot-link on signin routes to /forgot-password; forgot-email-input + forgot-submit render; submit -> POST /auth/forgot-password returns 404 (endpoint not yet deployed) -> app shows an error toast ('Not Found') and screen remains usable, no red screen, no JS crash. (5) VERIFY-EMAIL: navigated to /verify-email?email=someone@aqua.com; verify-code-input + verify-submit + verify-resend render; entering 123456 + submit -> POST /auth/verify-email returns 404 -> graceful error toast, no crash; tapping verify-resend triggers POST /auth/resend-verification (also 404) -> toast, screen still usable. (6) Post-flow re-login still lands on home with 4 tabs. ZERO pageerrors, ZERO red-screen crashes across all screens. Backward-compatible register() behaves exactly as spec'd: token in response -> auto-login, otherwise -> verify screen.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "forgot-password & verify-email", "issues": ["When the (not-yet-deployed) auth endpoints return 404, the toast surface the raw backend body 'Not Found' as-is. Functional (no crash) and per spec (graceful degradation), but a user-facing English 'Not Found' string on a French UI is slightly rough. Consider mapping 404 -> t('auth.errGeneric') in the api client or in AuthContext catch blocks. Non-blocking."]}
+    ],
+    "react_native_issues": [
+      {"component": "RN Web deprecation warnings (persisting from prior iterations)", "issue": "Console warnings only: '\"shadow*\" style props are deprecated. Use \"boxShadow\"' and 'props.pointerEvents is deprecated. Use style.pointerEvents'. Cosmetic on web, non-blocking. Reference: react-native-web bridge used by shadow.card / shadow.button in src/theme."}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_12.json"],
+  "action_items": [
+    "(Optional, low prio) Map non-2xx responses with plain-text bodies (like 'Not Found' from FastAPI/nginx) to a localized generic message before surfacing in the toast — e.g., in src/api/client.ts wrap 404 -> throw with message = t('auth.errGeneric') fallback.",
+    "(Optional) In verify-email resend handler, consider starting the 30s cooldown even on error to prevent spamming an unreachable endpoint (currently cooldown only starts after a successful resend)."
+  ],
+  "critical_code_review_comments": [
+    "app/auth.tsx submit() correctly gates signup on isStrongPassword(password) + password===confirm before setBusy(true), and correctly handles the legacy backend path by branching on res.requiresVerification (register() returns {requiresVerification:false,email} when backend returns a token, and persist() is called inside register). No regression risk to existing users.",
+    "src/context/AuthContext.tsx register() correctly distinguishes 'requires_verification' OR 'no token' -> requires verification, vs token -> persist. verifyEmail() correctly auto-logs in when the (future) backend returns {token,user}, else returns false so caller sends user back to /auth. All four new methods (verifyEmail/resendVerification/forgotPassword/resetPassword) simply await api.post — any 404/5xx propagates as an exception which the screens catch and toast — no unhandled promise rejection.",
+    "src/lib/password.ts checkPassword() is pure/small (16 LOC) and used consistently on both auth.tsx and forgot-password.tsx. Good DRY.",
+    "app/forgot-password.tsx step machine (1 -> 2) properly gates step 2 on a successful forgotPassword() call, so when the endpoint is 404 the user stays on step 1 — correct UX (no orphaned reset UI without a code)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100% (6/6 requested scenarios pass)"},
+  "seed_data_creation": "Created a throwaway signup account e1test<epoch>@aqua.com / Abcd1234 on the DEPLOYED drip-track1 backend during the happy-path test. This user is now on the onboarding step; safe to ignore or clean up later.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "CGU modal auto-shows every visit — click via page.evaluate() (Playwright's normal click reports 'outside of viewport' because RN modal uses transform-based layout on web). Login redirects to '/' for onboarded users, to '/onboarding' for brand-new signups. Verify-email/forgot-password toast the raw 'Not Found' body on the current remote backend — this is expected until the endpoints are deployed. New backend must return either {requires_verification:true} on register or a 403+requires_verification on login to trigger the verify-email routing in auth.tsx.",
+  "rca_of_issue": "N/A — no bugs found. All auth-hardening features (confirm password + live rules checklist + forgot flow + verify screen + graceful 404 degradation + backward-compatible register) behave exactly as specified in the review request."
+}

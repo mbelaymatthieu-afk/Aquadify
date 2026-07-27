@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Mascot } from "@/src/components/Mascot";
 import { useToast } from "@/src/components/Toast";
 import { useAuth } from "@/src/context/AuthContext";
+import { checkPassword, isStrongPassword } from "@/src/lib/password";
 import { useI18n } from "@/src/i18n";
 import { LANGS } from "@/src/i18n/translations";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
@@ -26,28 +27,61 @@ export default function AuthScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, lang, setLang } = useI18n();
-  const { login, register, googleLogin } = useAuth();
+  const { login, register, resendVerification, googleLogin } = useAuth();
   const toast = useToast();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [showCgu, setShowCgu] = useState(true);
+
+  const pwChecks = checkPassword(password);
 
   const submit = async () => {
     if (!email.trim() || !password || (mode === "signup" && !name.trim())) {
       toast.show(t("auth.errFields"), "error");
       return;
     }
+    if (mode === "signup") {
+      if (!isStrongPassword(password)) {
+        toast.show(t("auth.errWeakPassword"), "error");
+        return;
+      }
+      if (password !== confirm) {
+        toast.show(t("auth.errPasswordMismatch"), "error");
+        return;
+      }
+    }
     setBusy(true);
     try {
-      if (mode === "signin") await login(email.trim(), password);
-      else await register(name.trim(), email.trim(), password);
-      router.replace("/");
+      if (mode === "signin") {
+        await login(email.trim(), password);
+        router.replace("/");
+      } else {
+        const res = await register(name.trim(), email.trim(), password);
+        if (res.requiresVerification) {
+          toast.show(t("auth.verifySent"), "success");
+          router.push({ pathname: "/verify-email", params: { email: res.email } });
+        } else {
+          router.replace("/");
+        }
+      }
     } catch (e: any) {
-      toast.show(e?.message || t("auth.errGeneric"), "error");
+      // Backend blocks login until email verified -> route to verification.
+      if (e?.status === 403 || e?.data?.requires_verification) {
+        try {
+          await resendVerification(email.trim());
+        } catch {
+          // ignore
+        }
+        toast.show(t("auth.errNotVerified"), "info");
+        router.push({ pathname: "/verify-email", params: { email: email.trim() } });
+      } else {
+        toast.show(e?.message || t("auth.errGeneric"), "error");
+      }
     } finally {
       setBusy(false);
     }
@@ -138,6 +172,54 @@ export default function AuthScreen() {
               secureTextEntry
             />
           </View>
+
+          {mode === "signup" && (
+            <View style={styles.rulesBox} testID="password-rules">
+              {[
+                { ok: pwChecks.length, label: t("auth.ruleLength") },
+                { ok: pwChecks.upper, label: t("auth.ruleUpper") },
+                { ok: pwChecks.lower, label: t("auth.ruleLower") },
+                { ok: pwChecks.digit, label: t("auth.ruleDigit") },
+              ].map((r, i) => (
+                <View key={i} style={styles.ruleRow}>
+                  <Ionicons
+                    name={r.ok ? "checkmark-circle" : "ellipse-outline"}
+                    size={15}
+                    color={r.ok ? colors.success : colors.textMuted}
+                  />
+                  <Text style={[styles.ruleText, r.ok && { color: colors.success }]}>{r.label}</Text>
+                </View>
+              ))}
+            </View>
+          )}
+
+          {mode === "signup" && (
+            <View style={styles.field}>
+              <Text style={styles.label}>{t("auth.confirmPassword")}</Text>
+              <TextInput
+                testID="auth-confirm-input"
+                value={confirm}
+                onChangeText={setConfirm}
+                placeholder="••••••••"
+                placeholderTextColor={colors.textMuted}
+                style={styles.input}
+                secureTextEntry
+              />
+              {confirm.length > 0 && confirm !== password && (
+                <Text style={styles.fieldError}>{t("auth.errPasswordMismatch")}</Text>
+              )}
+            </View>
+          )}
+
+          {mode === "signin" && (
+            <Pressable
+              testID="auth-forgot-link"
+              onPress={() => router.push("/forgot-password")}
+              style={styles.forgot}
+            >
+              <Text style={styles.forgotText}>{t("auth.forgot")}</Text>
+            </Pressable>
+          )}
 
           <Pressable
             testID="auth-submit-button"
@@ -262,6 +344,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  rulesBox: { marginTop: -spacing.xs, marginBottom: spacing.md, gap: 4, paddingHorizontal: spacing.xs },
+  ruleRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  ruleText: { fontSize: font.tiny, color: colors.textMuted },
+  fieldError: { color: colors.danger, fontSize: font.tiny, marginTop: 4 },
+  forgot: { alignSelf: "flex-end", paddingVertical: spacing.xs, marginBottom: spacing.xs },
+  forgotText: { color: colors.white, fontSize: font.small, fontWeight: "700", textDecorationLine: "underline" },
   primaryBtn: {
     backgroundColor: colors.primary,
     borderRadius: radius.pill,
