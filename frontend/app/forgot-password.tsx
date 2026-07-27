@@ -39,7 +39,7 @@ export default function ForgotPasswordScreen() {
       toast.show(t("auth.resetSent"), "success");
       setStep(2);
     } catch (e: any) {
-      toast.show(e?.message || t("auth.errGeneric"), "error");
+      toast.show(e?.status === 404 ? t("auth.errGeneric") : e?.message || t("auth.errGeneric"), "error");
     } finally {
       setBusy(false);
     }
@@ -64,7 +64,7 @@ export default function ForgotPasswordScreen() {
       toast.show(t("auth.resetDone"), "success");
       router.replace("/auth");
     } catch (e: any) {
-      toast.show(e?.message || t("auth.errCode"), "error");
+      toast.show(e?.status === 404 ? t("auth.errGeneric") : e?.message || t("auth.errCode"), "error");
     } finally {
       setBusy(false);
     }

@@ -41,7 +41,7 @@ export default function VerifyEmailScreen() {
       toast.show(t("auth.verified"), "success");
       router.replace(loggedIn ? "/" : "/auth");
     } catch (e: any) {
-      toast.show(e?.message || t("auth.errCode"), "error");
+      toast.show(e?.status === 404 ? t("auth.errGeneric") : e?.message || t("auth.errCode"), "error");
     } finally {
       setBusy(false);
     }
@@ -49,12 +49,12 @@ export default function VerifyEmailScreen() {
 
   const resend = async () => {
     if (cooldown > 0) return;
+    setCooldown(30); // start cooldown regardless to avoid spamming
     try {
       await resendVerification(email);
-      setCooldown(30);
       toast.show(t("auth.verifySent"), "success");
     } catch (e: any) {
-      toast.show(e?.message || t("auth.errGeneric"), "error");
+      toast.show(e?.status === 404 ? t("auth.errGeneric") : e?.message || t("auth.errGeneric"), "error");
     }
   };
 
