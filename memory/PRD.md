@@ -117,6 +117,12 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - progress.tsx : badge score /100 (couleur selon niveau), raisons, résumé, conseils avec explication, prédiction (Premium), retry sur échec. insights.ts + payload enrichi (consumed_today, logs_today, last_intake_hours, hour_of_day, health snapshot).
 - À DÉPLOYER par l'utilisateur sur drip-track1 (prod) : `/api/insights` enrichi (réf. server.py + DEPLOY_TO_REMOTE.md §3). Métriques Santé = build iOS natif uniquement.
 
+## Iteration 2026-07-26 (b) — Bannière pub sur l'accueil + page téléchargement
+- AdBanner ajouté sur l'écran d'accueil (index.tsx) pour utilisateurs gratuits (n'existait que sur Progrès/Profil → "pas de pub au lancement"). Vérifié testing_agent iteration_10 : aucune régression, 4 onglets + features Premium tous présents (réfutation "features supprimées").
+- RAPPEL pub : AdMob ne s'affiche QUE sur build natif (jamais web/Expo Go). En dev build = TEST ads ; en prod = vraies pubs (fill possible après délai).
+- À VÉRIFIER par l'utilisateur : dans app.json, `ios.iosAppId` == `androidAppId` (`ca-app-pub-8009813538542789~7753483038`) — les App IDs AdMob sont propres à chaque plateforme. Fournir le vrai App ID iOS + l'unité bannière iOS depuis la console AdMob (cause probable d'absence de pub iOS).
+- Page téléchargement publique : aquadify-landing/telecharger.html (autonome, device-detect, vars APP_STORE_URL/GOOGLE_PLAY_URL vides, redirection auto si lien présent, boutons désactivés sinon). À héberger sur aquadify.com/telecharger (README fourni).
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
