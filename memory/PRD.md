@@ -123,6 +123,11 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - À VÉRIFIER par l'utilisateur : dans app.json, `ios.iosAppId` == `androidAppId` (`ca-app-pub-8009813538542789~7753483038`) — les App IDs AdMob sont propres à chaque plateforme. Fournir le vrai App ID iOS + l'unité bannière iOS depuis la console AdMob (cause probable d'absence de pub iOS).
 - Page téléchargement publique : aquadify-landing/telecharger.html (autonome, device-detect, vars APP_STORE_URL/GOOGLE_PLAY_URL vides, redirection auto si lien présent, boutons désactivés sinon). À héberger sur aquadify.com/telecharger (README fourni).
 
+## Iteration 2026-07-26 (c) — Config AdMob finale (IDs réels par plateforme)
+- app.json : iosAppId=ca-app-pub-8009813538542789~7753483038, androidAppId=...~2818700603 (étaient identiques → corrigé).
+- AdBanner.native.tsx : unités bannière par plateforme (iOS .../9752960414, Android .../6405637532), TEST ads en __DEV__, exclu Premium, logs onAdLoaded/onAdFailedToLoad + init success/fail. Bannière sur accueil (free only).
+- Vérifié testing_agent iteration_11 : aucune régression, Aquacoach/Aquanalyse/Points d'eau/Santé/Premium tous présents. Pub = build natif uniquement.
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
