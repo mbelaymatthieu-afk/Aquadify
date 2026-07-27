@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only non-regression sweep after adding <AdBanner /> to home (Aujourd'hui). CGU acceptance, email/password login (mobiletest123@aqua.com / Test1234!), and navigation across all 4 tabs verified on Expo web preview (390x844). Home renders fully after mounting AdBanner (which correctly returns null on web via AdBanner.web.tsx — no crash). All Premium-gated features still present (Aquanalyse score+tips, Aquacoach chat with free counter, Points d'eau locked screen). No JS errors, no red screen, zero pageerror events during the flow. AdBanner banner naturally absent on web preview (expected — native-only).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_10.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "AdBanner.web.tsx correctly returns null → home mounts safely on web preview.",
+    "AdBanner.native.tsx guards Expo Go (Constants.appOwnership === 'expo') and require() try/catch → will not crash Expo Go either; ads only render in native release/dev-client build for non-premium users. This matches user expectation.",
+    "Non-regression PASS: no removed Premium features. Aquanalyse (score 0/100 + AI tips), Aquacoach chat with free-usage counter (\"Vous avez utilisé vos messages gratuits\"), and Water Points (wp-locked gate) all render correctly for the free test user."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100%"},
+  "seed_data_creation": "None — used existing test account on deployed backend.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "Login flow: (1) wait for CGU modal, click text 'J'ai compris et j'accepte'; (2) fill [data-testid=auth-email-input] and [data-testid=auth-password-input]; (3) click text 'Se connecter'. Aquanalyse AI insights take ~3–5 s to populate — wait accordingly before asserting [data-testid=insights-score] / [data-testid=insight-tip-0]. AdBanner is native-only; expect NO visible ad on web preview or Expo Go (this is correct — the web variant returns null by design).",
+  "rca_of_issue": "User perception that Premium features were 'removed' is unfounded — verified all Premium screens still exist for the free user (locked/upsell states rendered as designed). Ads not visible on preview because AdMob is native-build-only; on web AdBanner.web.tsx renders null. Fix (mounting <AdBanner /> in app/(tabs)/index.tsx) is safe and does not crash the home screen.",
+  "flow_verified": [
+    "Boot → CGU accept",
+    "Login mobiletest123@aqua.com / Test1234! → Home (Aujourd'hui) renders",
+    "Home: water-drop progress, quick-add (glass/cup/bottle/large_bottle/custom), today-waterpoints card, today's logs section, no crash after AdBanner mount",
+    "Progrès tab: insights-score + insight-tip-0 present after AI insight loads (~5s)",
+    "Aquacoach tab: coach chat + free counter visible",
+    "Profil tab: link-waterpoints → water-points screen → wp-locked gate",
+    "Zero pageerror / red-screen throughout"
+  ]
+}

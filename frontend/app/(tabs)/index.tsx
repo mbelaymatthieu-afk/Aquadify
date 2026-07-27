@@ -20,6 +20,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { WaterDropProgress } from "@/src/components/WaterDropProgress";
 import { useToast } from "@/src/components/Toast";
+import AdBanner from "@/src/components/AdBanner";
 import { api } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
@@ -250,6 +251,8 @@ export default function TodayScreen() {
               ))
           )}
         </View>
+
+        <AdBanner />
       </ScrollView>
 
       {/* custom amount modal */}
