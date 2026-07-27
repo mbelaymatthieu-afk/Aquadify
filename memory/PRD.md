@@ -128,6 +128,15 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - AdBanner.native.tsx : unités bannière par plateforme (iOS .../9752960414, Android .../6405637532), TEST ads en __DEV__, exclu Premium, logs onAdLoaded/onAdFailedToLoad + init success/fail. Bannière sur accueil (free only).
 - Vérifié testing_agent iteration_11 : aucune régression, Aquacoach/Aquanalyse/Points d'eau/Santé/Premium tous présents. Pub = build natif uniquement.
 
+## Iteration 2026-07-27 — Se connecter avec Apple (bloquant App Store 4.8)
+- expo-apple-authentication@8.0.8 installé. Bouton natif Apple (AppleAuthenticationButton, iOS only) ajouté sur auth.tsx sous le bouton Google, affiché uniquement si isAppleAvailable() (gated). Web/Android : aucun bouton (dégradation propre, jamais de crash — vérifié preview).
+- src/lib/apple.native.ts (isAppleAvailable/signInWithApple/isAppleCancel) + apple.web.ts no-op (module natif JAMAIS dans le bundle web). src/components/AppleSignInButton.native|web.tsx.
+- AuthContext.appleLogin() : signInWithApple() -> POST /auth/apple {identity_token,name,email} -> persist({token,user}) (même contrat que google/session). Annulation gérée sans toast.
+- app.json : ios.usesAppleSignIn=true, ios.config.usesNonExemptEncryption=false, plugin "expo-apple-authentication".
+- i18n auth.apple (fr/en/es).
+- BACKEND À DÉPLOYER (DEPLOY_TO_REMOTE.md §5) : POST /api/auth/apple — vérif JWT Apple (JWKS RS256 + issuer + audience), upsert par apple_sub, renvoie {token,user}. Prérequis: pip pyjwt[crypto], env APPLE_AUDIENCES="com.mtagency.aquadify,host.exp.Exponent".
+- Testable uniquement sur build iOS natif (ou Expo Go iOS avec audience host.exp.Exponent) + après déploiement de l'endpoint.
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.

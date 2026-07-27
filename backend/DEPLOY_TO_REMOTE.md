@@ -260,3 +260,92 @@ Notes :
 - `EmailReq2` = votre modèle login existant `{email, password}`.
 - Indispensable : hachage **bcrypt** (jamais en clair), codes **hachés + TTL 15 min**, **rate limiting** login/resend/forgot, login **bloqué** tant que `email_verified` est faux. La vérification n'est demandée qu'à l'inscription ; ensuite l'utilisateur se connecte normalement.
 - Adaptez les noms de collections/champs à votre schéma réel.
+
+---
+
+## 5) POST /api/auth/apple — Se connecter avec Apple (bloquant App Store 4.8)
+
+L'app iOS envoie l'`identity_token` Apple (JWT). Le backend le **vérifie** contre
+les clés publiques Apple (JWKS RS256), puis crée/retrouve l'utilisateur par le
+claim `sub` (identifiant Apple stable) et renvoie `{token, user}` — **même format
+que `/auth/login` et `/auth/google/session`**.
+
+Prérequis :
+- `pip install "pyjwt[crypto]"`
+- Variable d'env sur drip-track1 : `APPLE_AUDIENCES="com.mtagency.aquadify,host.exp.Exponent"`
+  (le bundle id de production **ET** `host.exp.Exponent` pour Expo Go durant les tests).
+
+> ⚠️ Le nom et l'e-mail ne sont fournis par Apple **qu'à la 1re connexion** →
+> à sauvegarder immédiatement, ne jamais écraser avec des valeurs nulles ensuite.
+> Avec « Masquer mon e-mail », l'e-mail est une adresse relais `@privaterelay.appleid.com`
+> → **toujours** identifier l'utilisateur par `apple_sub`, pas par l'e-mail.
+
+```python
+import os, jwt
+from jwt import PyJWKClient
+from fastapi import HTTPException
+from pydantic import BaseModel
+
+APPLE_ISSUER = "https://appleid.apple.com"
+APPLE_AUDIENCES = [a.strip() for a in os.environ.get("APPLE_AUDIENCES", "").split(",") if a.strip()]
+_apple_jwks = PyJWKClient("https://appleid.apple.com/auth/keys")
+
+class AppleReq(BaseModel):
+    identity_token: str
+    name: str | None = None
+    email: str | None = None
+
+@api_router.post("/auth/apple")
+async def auth_apple(req: AppleReq):
+    # 1) Vérifier le JWT Apple (signature RS256 + issuer + audience + expiration).
+    try:
+        signing_key = _apple_jwks.get_signing_key_from_jwt(req.identity_token).key
+        claims = jwt.decode(
+            req.identity_token,
+            signing_key,
+            algorithms=["RS256"],
+            audience=APPLE_AUDIENCES,   # accepte n'importe quelle audience de la liste
+            issuer=APPLE_ISSUER,
+        )
+    except Exception:
+        raise HTTPException(401, "Jeton Apple invalide.")
+
+    apple_sub = claims.get("sub")
+    if not apple_sub:
+        raise HTTPException(401, "Jeton Apple invalide.")
+    token_email = claims.get("email")  # présent surtout à la 1re connexion
+
+    # 2) Upsert par apple_sub (source de vérité), jamais par e-mail.
+    u = await db.users.find_one({"apple_sub": apple_sub})
+    if not u:
+        u = {
+            # ... vos champs par défaut (daily_goal_ml, is_premium=False, profile, etc.)
+            "apple_sub": apple_sub,
+            "email": (req.email or token_email or f"{apple_sub}@privaterelay.appleid.com").lower(),
+            "name": req.name or "Utilisateur Apple",
+            "email_verified": True,          # Apple garantit l'e-mail
+            "auth_provider": "apple",
+        }
+        await db.users.insert_one(u)
+        u = await db.users.find_one({"apple_sub": apple_sub})
+    else:
+        # Compléter nom/e-mail uniquement s'ils manquent (fournis 1x par Apple).
+        patch = {}
+        if req.name and not u.get("name"):
+            patch["name"] = req.name
+        if (req.email or token_email) and not u.get("email"):
+            patch["email"] = (req.email or token_email).lower()
+        if patch:
+            await db.users.update_one({"apple_sub": apple_sub}, {"$set": patch})
+            u = await db.users.find_one({"apple_sub": apple_sub})
+
+    return {"token": create_token(u), "user": serialize_user(u)}
+```
+
+Notes :
+- `create_token` / `serialize_user` : réutilisez vos fonctions existantes.
+- Index MongoDB recommandé : unique sparse sur `apple_sub`.
+- Tant que cet endpoint n'est pas déployé, le bouton Apple affiche un message
+  d'erreur clair côté app (pas de crash), mais **Apple exige ce bouton pour
+  l'App Store** dès lors que Google est proposé (règle 4.8).
+

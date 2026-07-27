@@ -1,7 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -15,9 +15,11 @@ import {
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppleSignInButton } from "@/src/components/AppleSignInButton";
 import { Mascot } from "@/src/components/Mascot";
 import { useToast } from "@/src/components/Toast";
 import { useAuth } from "@/src/context/AuthContext";
+import { isAppleAvailable, isAppleCancel } from "@/src/lib/apple";
 import { checkPassword, isStrongPassword } from "@/src/lib/password";
 import { useI18n } from "@/src/i18n";
 import { LANGS } from "@/src/i18n/translations";
@@ -27,7 +29,7 @@ export default function AuthScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t, lang, setLang } = useI18n();
-  const { login, register, resendVerification, googleLogin } = useAuth();
+  const { login, register, resendVerification, googleLogin, appleLogin } = useAuth();
   const toast = useToast();
 
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -37,6 +39,11 @@ export default function AuthScreen() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [showCgu, setShowCgu] = useState(true);
+  const [appleReady, setAppleReady] = useState(false);
+
+  useEffect(() => {
+    isAppleAvailable().then(setAppleReady).catch(() => setAppleReady(false));
+  }, []);
 
   const pwChecks = checkPassword(password);
 
@@ -94,6 +101,20 @@ export default function AuthScreen() {
       if (ok) router.replace("/");
     } catch (e: any) {
       toast.show(e?.message || t("auth.errGeneric"), "error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onApple = async () => {
+    setBusy(true);
+    try {
+      const ok = await appleLogin();
+      if (ok) router.replace("/");
+    } catch (e: any) {
+      if (!isAppleCancel(e)) {
+        toast.show(e?.message || t("auth.errGeneric"), "error");
+      }
     } finally {
       setBusy(false);
     }
@@ -254,6 +275,8 @@ export default function AuthScreen() {
             />
             <Text style={styles.googleText}>{t("auth.google")}</Text>
           </Pressable>
+
+          {appleReady && <AppleSignInButton onPress={onApple} disabled={busy} />}
 
           <Pressable
             testID="auth-toggle-mode"

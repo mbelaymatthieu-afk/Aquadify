@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 import { api } from "@/src/api/client";
+import { signInWithApple } from "@/src/lib/apple";
 import { hasActive } from "@/src/lib/iap";
 import { storage } from "@/src/utils/storage";
 
@@ -47,6 +48,7 @@ type AuthValue = {
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, password: string) => Promise<void>;
   googleLogin: () => Promise<boolean>;
+  appleLogin: () => Promise<boolean>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   setUser: (u: AquaUser) => void;
@@ -182,6 +184,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return true;
   };
 
+  const appleLogin = async (): Promise<boolean> => {
+    const cred = await signInWithApple();
+    if (!cred) return false;
+    const data = await api.post<{ token: string; user: AquaUser }>("/auth/apple", {
+      identity_token: cred.identityToken,
+      name: cred.fullName,
+      email: cred.email,
+    });
+    await persist(data);
+    return true;
+  };
+
   const logout = async () => {
     try {
       if (token) await api.post("/auth/logout", {}, token);
@@ -212,6 +226,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         forgotPassword,
         resetPassword,
         googleLogin,
+        appleLogin,
         logout,
         refreshUser,
         setUser,

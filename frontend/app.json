@@ -11,6 +11,10 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mtagency.aquadify",
+      "usesAppleSignIn": true,
+      "config": {
+        "usesNonExemptEncryption": false
+      },
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Show relevant ads in the free version",
         "NSLocationWhenInUseUsageDescription": "Find drinking fountains near you",
@@ -58,6 +62,7 @@
       ],
       "expo-tracking-transparency",
       "expo-iap",
+      "expo-apple-authentication",
       [
         "@kingstinct/react-native-healthkit",
         {
