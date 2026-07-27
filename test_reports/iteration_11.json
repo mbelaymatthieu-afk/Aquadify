@@ -1,0 +1,30 @@
+{
+  "summary": "Frontend-only non-regression sweep after final AdMob config (real iOS/Android app IDs + platform-specific banner unit IDs) on Expo web preview (390x844). CGU accepted, email/password login (mobiletest123@aqua.com / Test1234!) OK. ZERO pageerrors, ZERO red-screen crashes across the whole flow. AdBanner correctly returns null on web (data-testid=ad-banner count=0) — expected, native-only by design. All Premium-gated features still present for the FREE test user: (a) Aquacoach tab renders chat + shows 'Vous avez utilisé vos messages gratuits' free counter; (b) Aquanalyse on Progrès tab renders insights-score AND insight-tip-0; (c) Points d'eau via Profil > link-waterpoints shows wp-locked gate + wp-unlock CTA; (d) Santé screen via Profil > link-health shows health-locked upsell; (e) Premium screen via profile-premium-button opens fully ('Aquadify Premium' hero + premium-subscribe-button = Devenir Premium + premium-close). Delete-account modal (Profil > Zone sensible > delete-account-button) opens with the full double confirmation flow: delete-continue → delete-confirm → delete-cancel works and dismisses. Home renders drop progress (0%/2450 ml visible), Ajout rapide (quick-add-glass/cup/bottle/large_bottle/custom), Points d'eau card, no crash after AdBanner mount.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [],
+    "react_native_issues": [
+      {"component": "RNW deprecation warnings", "issue": "Console warnings: 'shadow*' style props are deprecated (use boxShadow) AND props.pointerEvents is deprecated (use style.pointerEvents). Cosmetic, non-blocking on web. Reference: react-native-web bridge in current dependencies."}
+    ]
+  },
+  "test_report_links": ["/app/test_reports/iteration_11.json"],
+  "action_items": [
+    "None required — AdMob config change is safe on web (AdBanner.web.tsx returns null; AdBanner.native.tsx guards Expo Go + require() try/catch). Ads will only render on a real native dev-client / release build for non-premium users, using TestIds.BANNER in __DEV__ and platform-specific prod banner unit IDs otherwise.",
+    "(Optional, low prio) Migrate remaining shadow* / pointerEvents props to the new RN Web style API to silence deprecation warnings."
+  ],
+  "critical_code_review_comments": [
+    "app.json: react-native-google-mobile-ads plugin is correctly configured with real iosAppId (ca-app-pub-8009813538542789~7753483038) and androidAppId (ca-app-pub-8009813538542789~2818700603). Matches problem statement.",
+    "AdBanner.native.tsx: correct triple guard — (1) Constants.appOwnership==='expo' returns null (Expo Go safe), (2) !user || user.is_premium returns null (no ads for Premium), (3) __DEV__ ? TestIds.BANNER : prodUnit (Google policy-safe test ads in dev). Load/fail listeners log properly.",
+    "AdBanner.web.tsx: pure `return null` — home mounts safely on web preview and no ad-banner testID rendered (verified via count=0).",
+    "app/(tabs)/index.tsx line 23 imports AdBanner from '@/src/components/AdBanner' and line 255 mounts <AdBanner /> — Metro resolves to .web variant on web (null) and .native variant on iOS/Android. No regression."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100%"},
+  "seed_data_creation": "None — reused existing deployed-backend test account.",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "On web preview, AdBanner ALWAYS returns null (AdBanner.web.tsx) — do NOT assert visible banner. To validate delete-account double confirmation use testIDs: delete-account-button → delete-continue (step1) → delete-confirm (step2), with delete-cancel closing at either step. Premium screen testIDs: premium-close, premium-subscribe-button, premium-restore, premium-plan-yearly, premium-plan-monthly (plan cards may be 0 on web if Stripe plans fetch is native-only — the subscribe button is what matters). Aquanalyse insights take ~3-6s to populate — wait before asserting insights-score / insight-tip-0.",
+  "rca_of_issue": "No regression detected. AdMob final-config commit did not break any Premium feature. All previously-verified Premium screens still render for the free user with the correct locked/upsell state. Zero JS errors during the sweep."
+}
