@@ -2,32 +2,38 @@
   "expo": {
     "name": "Aquadify",
     "slug": "frontend",
-    "version": "1.0.0",
+    "version": "1.0.6",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "aquadify",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.mta.aquadify",
+      "bundleIdentifier": "com.mtagency.aquadify",
+      "buildNumber": "1",
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "Show relevant ads in the free version"
+        "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicités pertinentes dans la version gratuite.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
+
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#2F6FD0"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.mta.aquadify"
+      "package": "com.mtagency.aquadify"
     },
+
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
+
     "plugins": [
       "expo-router",
       "expo-notifications",
@@ -48,8 +54,16 @@
         }
       ]
     ],
+
     "experiments": {
       "typedRoutes": true
+    },
+
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c25c13e4-9fe7-49d8-8605-540fe90824e2"
+      }
     }
   }
 }
