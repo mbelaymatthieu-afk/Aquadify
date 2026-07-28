@@ -37,13 +37,12 @@ export default function AdBanner() {
   }, [isExpoGo]);
 
   if (isExpoGo) return null;
-  if (!user || user.is_premium) return null; // no ads for Premium users
+  if (!user) return null; // user must be logged in
   if (!Ads) return null;
 
   const { BannerAd, BannerAdSize, TestIds } = Ads;
-  const prodUnit = Platform.OS === "ios" ? BANNER_UNIT_IOS : BANNER_UNIT_ANDROID;
   // Google requires TEST ads during development to avoid policy strikes.
-  const unitId = __DEV__ ? TestIds.BANNER : prodUnit;
+  const unitId = TestIds.BANNER;
 
   return (
     <View style={{ alignItems: "center", paddingVertical: 8 }} testID="ad-banner">
