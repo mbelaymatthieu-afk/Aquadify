@@ -309,13 +309,11 @@ export default function ProfileScreen() {
             <Pressable testID="link-health" onPress={() => router.push("/health")} style={styles.linkRow}>
               <Ionicons name="fitness-outline" size={20} color={colors.primary} />
               <Text style={styles.linkText}>{t("health.title")}</Text>
-              {!user.is_premium && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
             <Pressable testID="link-waterpoints" onPress={() => router.push("/water-points")} style={styles.linkRow}>
               <Ionicons name="location-outline" size={20} color={colors.primary} />
               <Text style={styles.linkText}>{t("waterPoints.title")}</Text>
-              {!user.is_premium && <Ionicons name="lock-closed" size={14} color={colors.textMuted} />}
               <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
             </Pressable>
             <Pressable
