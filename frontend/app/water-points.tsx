@@ -42,7 +42,7 @@ export default function WaterPointsScreen() {
   const { t } = useI18n();
   const toast = useToast();
   const { user } = useAuth();
-  const premium = !!user?.is_premium;
+  const premium = true;
 
   const [status, setStatus] = useState<Status>("idle");
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
@@ -111,7 +111,7 @@ export default function WaterPointsScreen() {
         </View>
       </LinearGradient>
 
-      {!premium ? (
+      {false ? (
         <View style={styles.gate} testID="wp-locked">
           <View style={styles.gateIcon}>
             <Ionicons name="lock-closed" size={34} color={colors.primary} />
