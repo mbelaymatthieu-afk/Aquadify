@@ -1,10 +1,20 @@
 import { haversine } from "@/src/lib/geo";
 
+// A specific OSM-derived category, used for a meaningful label (not just "fountain").
+export type WaterKind =
+  | "fountain"
+  | "drinking_water"
+  | "tap"
+  | "water_point"
+  | "spring"
+  | "water";
+
 export type WaterPoint = {
   id: string;
   lat: number;
   lon: number;
   type: "fountain" | "water";
+  kind: WaterKind;
   name?: string;
   address?: string;
   distance: number;
@@ -43,6 +53,17 @@ function buildAddress(tags: any): string | undefined {
   return parts.length ? parts.join(", ") : undefined;
 }
 
+// Derive a specific category from the OSM tags so we can show a real name
+// (e.g. "Source", "Robinet d'eau") instead of always "Fontaine".
+function classify(tags: any): WaterKind {
+  if (tags.man_made === "water_tap") return "tap";
+  if (tags.natural === "spring") return "spring";
+  if (tags.amenity === "water_point") return "water_point";
+  if (tags.fountain === "drinking" || tags.amenity === "fountain") return "fountain";
+  if (tags.amenity === "drinking_water") return "drinking_water";
+  return "water";
+}
+
 function mapElements(json: any, lat: number, lon: number): WaterPoint[] {
   return (json.elements || [])
     .map((e: any) => {
@@ -50,16 +71,14 @@ function mapElements(json: any, lat: number, lon: number): WaterPoint[] {
       const elon = e.lon ?? e.center?.lon;
       if (elat == null || elon == null) return null;
       const tags = e.tags || {};
-      const isFountain =
-        tags.amenity === "drinking_water" ||
-        tags.drinking_water === "yes" ||
-        tags.fountain === "drinking" ||
-        tags.natural === "spring";
+      const kind = classify(tags);
+      const isFountain = kind === "fountain" || kind === "drinking_water" || kind === "spring";
       return {
         id: `${e.type}/${e.id}`,
         lat: elat,
         lon: elon,
         type: isFountain ? "fountain" : "water",
+        kind,
         name: tags.name,
         address: buildAddress(tags),
         distance: haversine(lat, lon, elat, elon),

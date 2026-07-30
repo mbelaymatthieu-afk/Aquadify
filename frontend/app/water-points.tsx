@@ -26,6 +26,16 @@ import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
 type Status = "idle" | "granted" | "denied" | "blocked";
 
+// A distinct icon per water-point category (not just a generic fountain).
+const KIND_ICON: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
+  fountain: "fountain",
+  drinking_water: "cup-water",
+  tap: "water-pump",
+  water_point: "water-well",
+  spring: "waterfall",
+  water: "water",
+};
+
 export default function WaterPointsScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -166,14 +176,14 @@ export default function WaterPointsScreen() {
                   <View key={p.id} style={styles.card} testID={`wp-item-${p.id}`}>
                     <View style={styles.wpIcon}>
                       <MaterialCommunityIcons
-                        name={p.type === "fountain" ? "fountain" : "water"}
+                        name={KIND_ICON[p.kind] || "water"}
                         size={22}
                         color={colors.primary}
                       />
                     </View>
                     <Pressable style={{ flex: 1 }} testID={`wp-info-${p.id}`} onPress={() => setDetailFor(p)}>
                       <Text style={styles.wpName} numberOfLines={1}>
-                        {p.name || t(`waterPoints.${p.type}`)}
+                        {p.name || t(`waterPoints.kinds.${p.kind}`)}
                       </Text>
                       <View style={styles.wpMetaRow}>
                         <Ionicons name="location-outline" size={13} color={colors.textMuted} />
@@ -219,13 +229,13 @@ export default function WaterPointsScreen() {
             <View style={styles.detailHeader}>
               <View style={styles.wpIcon}>
                 <MaterialCommunityIcons
-                  name={detailFor?.type === "fountain" ? "fountain" : "water"}
+                  name={detailFor ? KIND_ICON[detailFor.kind] || "water" : "water"}
                   size={22}
                   color={colors.primary}
                 />
               </View>
               <Text style={styles.sheetTitle}>
-                {detailFor?.name || (detailFor ? t(`waterPoints.${detailFor.type}`) : "")}
+                {detailFor?.name || (detailFor ? t(`waterPoints.kinds.${detailFor.kind}`) : "")}
               </Text>
             </View>
             {!!detailFor?.address && (

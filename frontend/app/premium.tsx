@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Mascot } from "@/src/components/Mascot";
@@ -263,6 +263,19 @@ export default function PremiumScreen() {
           )}
         </View>
 
+        {IAP_ENABLED && user?.is_premium && (
+          <Pressable
+            testID="premium-manage"
+            onPress={() =>
+              Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => {})
+            }
+            style={({ pressed }) => [styles.manageBtn, pressed && { opacity: 0.9 }]}
+          >
+            <Ionicons name="settings-outline" size={18} color={colors.white} />
+            <Text style={styles.manageBtnText}>{t("premium.manage")}</Text>
+          </Pressable>
+        )}
+
         {IAP_ENABLED && (
           <Pressable testID="premium-restore" onPress={restore} disabled={busy} style={styles.restoreBtnBottom}>
             <Text style={styles.restoreTextBottom}>{t("premium.restore")}</Text>
@@ -377,4 +390,17 @@ const styles = StyleSheet.create({
     ...shadow.button,
   },
   ctaText: { color: colors.white, fontSize: font.body, fontWeight: "800" },
+  manageBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: radius.pill,
+    minHeight: 50,
+    marginTop: spacing.lg,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.35)",
+  },
+  manageBtnText: { color: colors.white, fontSize: font.small, fontWeight: "700" },
 });

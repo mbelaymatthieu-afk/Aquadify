@@ -265,13 +265,31 @@ export default function ProfileScreen() {
         {/* premium */}
         <View style={styles.section}>
           {user.is_premium ? (
-            <View style={[styles.card, styles.premiumActiveCard]}>
-              <Ionicons name="sparkles" size={22} color={colors.gold} />
-              <View style={{ flex: 1 }}>
-                <Text style={styles.rowLabel}>{t("profile.premiumActive")}</Text>
-                <Text style={styles.rowHint}>{t("profile.premiumHint")}</Text>
+            <>
+              <View style={[styles.card, styles.premiumActiveCard]}>
+                <Ionicons name="sparkles" size={22} color={colors.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.rowLabel}>{t("profile.premiumActive")}</Text>
+                  <Text style={styles.rowHint}>{t("profile.premiumHint")}</Text>
+                </View>
               </View>
-            </View>
+              {Platform.OS === "ios" && (
+                <Pressable
+                  testID="profile-manage-sub"
+                  onPress={() =>
+                    Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => {})
+                  }
+                  style={[styles.card, styles.manageRow]}
+                >
+                  <Ionicons name="settings-outline" size={20} color={colors.primary} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.rowLabel}>{t("profile.manageSubscription")}</Text>
+                    <Text style={styles.rowHint}>{t("profile.manageSubscriptionHint")}</Text>
+                  </View>
+                  <Ionicons name="open-outline" size={18} color={colors.textMuted} />
+                </Pressable>
+              )}
+            </>
           ) : (
             <Pressable testID="profile-premium-button" onPress={() => router.push("/premium")} style={styles.premiumCta}>
               <Ionicons name="sparkles" size={20} color={colors.white} />
@@ -489,6 +507,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   premiumActiveCard: { flexDirection: "row", alignItems: "center", gap: spacing.md },
+  manageRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginTop: spacing.sm },
   premiumCta: {
     flexDirection: "row",
     alignItems: "center",
