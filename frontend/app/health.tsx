@@ -26,6 +26,8 @@ export default function HealthScreen() {
   const [activity, setActivity] = useState<TodayActivity | null>(null);
 
   const provider = Platform.OS === "ios" ? "apple_health" : "google_fit";
+  const sectionTitle = Platform.OS === "ios" ? t("health.appleSection") : "Google Fit";
+  const connectedLabel = Platform.OS === "ios" ? t("health.appleConnected") : t("health.connected");
 
   const profile = () => {
     const p = (user?.profile || {}) as any;
@@ -167,9 +169,15 @@ export default function HealthScreen() {
           </View>
         ) : HEALTH_ENABLED && connected && activity ? (
           <View style={styles.card} testID="health-connected">
+            <View style={styles.sectionHead}>
+              <View style={styles.appleIcon}>
+                <Ionicons name="heart" size={18} color="#FF2D55" />
+              </View>
+              <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+            </View>
             <View style={styles.connectedRow}>
-              <Ionicons name="fitness" size={22} color={colors.success} />
-              <Text style={styles.connectedText}>{t("health.connected")}</Text>
+              <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+              <Text style={styles.connectedText}>{connectedLabel}</Text>
             </View>
 
             <View style={styles.statsRow}>
@@ -205,9 +213,15 @@ export default function HealthScreen() {
           </View>
         ) : connected ? (
           <View style={styles.card} testID="health-connected">
+            <View style={styles.sectionHead}>
+              <View style={styles.appleIcon}>
+                <Ionicons name="heart" size={18} color="#FF2D55" />
+              </View>
+              <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+            </View>
             <View style={styles.connectedRow}>
-              <Ionicons name="fitness" size={22} color={colors.success} />
-              <Text style={styles.connectedText}>{t("health.connected")}</Text>
+              <Ionicons name="checkmark-circle" size={22} color={colors.success} />
+              <Text style={styles.connectedText}>{connectedLabel}</Text>
             </View>
             <Text style={styles.note}>{t("health.connectedBody")}</Text>
             <Pressable testID="health-disconnect" onPress={disconnect} disabled={busy} style={styles.ghostBtn}>
@@ -216,6 +230,13 @@ export default function HealthScreen() {
           </View>
         ) : (
           <View style={styles.card}>
+            <View style={styles.sectionHead}>
+              <View style={styles.appleIcon}>
+                <Ionicons name={Platform.OS === "ios" ? "heart" : "fitness"} size={18} color={Platform.OS === "ios" ? "#FF2D55" : colors.primary} />
+              </View>
+              <Text style={styles.sectionTitle}>{sectionTitle}</Text>
+            </View>
+            <Text style={styles.note}>{t("health.appleExplain")}</Text>
             <Pressable
               testID="health-connect"
               onPress={HEALTH_ENABLED ? connectHealthKit : connectMock}
@@ -249,6 +270,9 @@ const styles = StyleSheet.create({
   headerTitle: { color: colors.white, fontSize: font.h2, fontWeight: "800" },
   headerSub: { color: "rgba(255,255,255,0.85)", fontSize: font.tiny },
   card: { backgroundColor: colors.card, borderRadius: radius.lg, padding: spacing.lg, marginBottom: spacing.md, ...shadow.soft },
+  sectionHead: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
+  appleIcon: { width: 34, height: 34, borderRadius: radius.pill, backgroundColor: colors.cardAlt, alignItems: "center", justifyContent: "center" },
+  sectionTitle: { fontSize: font.h3, fontWeight: "800", color: colors.text },
   benefitRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
   benefitIcon: { width: 30, height: 30, borderRadius: radius.pill, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
   benefitText: { flex: 1, fontSize: font.small, color: colors.text, fontWeight: "600" },

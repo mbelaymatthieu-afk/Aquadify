@@ -17,7 +17,7 @@
       },
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Show relevant ads in the free version",
-        "NSLocationWhenInUseUsageDescription": "Find drinking fountains near you",
+        "NSLocationWhenInUseUsageDescription": "Aquadify utilise votre position pour afficher les points d'eau potable les plus proches de vous, calculer leur distance et vous permettre d'obtenir un itinéraire pour vous y rendre.",
         "NSHealthShareUsageDescription": "Adapt your water goal to your activity",
         "NSHealthUpdateUsageDescription": "HealthKit requires this for permission prompts"
       }
@@ -41,7 +41,7 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Find drinking fountains near you"
+          "locationWhenInUsePermission": "Aquadify utilise votre position pour afficher les points d'eau potable les plus proches de vous, calculer leur distance et vous permettre d'obtenir un itinéraire pour vous y rendre."
         }
       ],
       [

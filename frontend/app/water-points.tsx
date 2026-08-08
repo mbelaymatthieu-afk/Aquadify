@@ -140,7 +140,7 @@ export default function WaterPointsScreen() {
           ) : (
             <Pressable testID="wp-allow" onPress={requestLocation} style={styles.primaryBtn}>
               <Ionicons name="navigate" size={18} color={colors.white} />
-              <Text style={styles.primaryBtnText}>{t("waterPoints.allow")}</Text>
+              <Text style={styles.primaryBtnText}>{t("common.continue")}</Text>
             </Pressable>
           )}
           {status === "denied" && <Text style={styles.deniedText}>{t("waterPoints.denied")}</Text>}

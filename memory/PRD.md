@@ -137,6 +137,12 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - BACKEND À DÉPLOYER (DEPLOY_TO_REMOTE.md §5) : POST /api/auth/apple — vérif JWT Apple (JWKS RS256 + issuer + audience), upsert par apple_sub, renvoie {token,user}. Prérequis: pip pyjwt[crypto], env APPLE_AUDIENCES="com.mtagency.aquadify,host.exp.Exponent".
 - Testable uniquement sur build iOS natif (ou Expo Go iOS avec audience host.exp.Exponent) + après déploiement de l'endpoint.
 
+## Iteration 2026-08-08 — Corrections retour Apple App Review (2.1b, 5.1.1 ii/iv, 2.5.1)
+- (2.5.1 localisation) app.json : NSLocationWhenInUseUsageDescription + plugin expo-location locationWhenInUsePermission réécrits (texte explicite FR : afficher points d'eau proches, distance, itinéraire). Seule la permission WhenInUse est demandée (pas de background).
+- (5.1.1 pré-permission) water-points.tsx : bouton de l'écran explicatif « Autoriser » → « Continuer » (t common.continue). Il déclenche uniquement la demande système iOS ; message de refus neutre (non culpabilisant) conservé.
+- (2.5.1 HealthKit identifiable) health.tsx : section clairement intitulée « Apple Santé » (icône cœur rouge) + explication (health.appleExplain) + bouton « Connecter Apple Santé » ; état connecté = « Apple Santé connecté » (health.appleConnected). iOS→Apple Santé, Android→Google Fit. Intégration HealthKit existante inchangée. i18n fr/en/es.
+- (2.1b IAP) VÉRIFIÉ sans changement code : SKUs com.mtagency.aquadify.premium.monthly|yearly (iap.native.ts) alignés au bundleIdentifier com.mtagency.aquadify ; achat/restauration StoreKit OK ; is_premium activé post-achat (verify remote ou optimiste + entitlement local) ; AUCUNE référence Stripe sur iOS (fallback Stripe uniquement si !IAP_ENABLED = web/Android). Soumission produit + capture App Review = à faire manuellement dans App Store Connect (étapes fournies à l'utilisateur).
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
