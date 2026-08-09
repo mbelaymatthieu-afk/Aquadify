@@ -143,6 +143,14 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - (2.5.1 HealthKit identifiable) health.tsx : section clairement intitulée « Apple Santé » (icône cœur rouge) + explication (health.appleExplain) + bouton « Connecter Apple Santé » ; état connecté = « Apple Santé connecté » (health.appleConnected). iOS→Apple Santé, Android→Google Fit. Intégration HealthKit existante inchangée. i18n fr/en/es.
 - (2.1b IAP) VÉRIFIÉ sans changement code : SKUs com.mtagency.aquadify.premium.monthly|yearly (iap.native.ts) alignés au bundleIdentifier com.mtagency.aquadify ; achat/restauration StoreKit OK ; is_premium activé post-achat (verify remote ou optimiste + entitlement local) ; AUCUNE référence Stripe sur iOS (fallback Stripe uniquement si !IAP_ENABLED = web/Android). Soumission produit + capture App Review = à faire manuellement dans App Store Connect (étapes fournies à l'utilisateur).
 
+## Iteration 2026-08-09 — P2 App Store, Points d'eau gratuits, Apple Santé (Profil), Essai 7j mis en avant
+- (P2 privacy manifest) app.json ios.privacyManifests : NSPrivacyAccessedAPITypes (UserDefaults CA92.1, FileTimestamp C617.1, SystemBootTime 35F9.1, DiskSpace E174.1) pour AsyncStorage/AdMob.
+- (P2 support) privacy.tsx : bouton « Contacter le support » (mailto:support@aquadify.com). i18n privacy.contactSupport fr/en/es.
+- (Points d'eau GRATUITS) water-points.tsx : gate Premium SUPPRIMÉE → accessible gratuits + Premium. Retiré useAuth/premium + branche wp-locked. profile.tsx : cadenas retiré du lien Points d'eau. (Les clés i18n waterPoints.lockedTitle/Body/unlock restent, inutilisées.)
+- (Apple Santé identifiable — Profil) profile.tsx : lien Santé affiche « Apple Santé » sur iOS (health.appleSection), « Santé & activité » ailleurs. Health reste Premium (cadenas conservé).
+- (Essai 7j) premium.tsx : bannière verte « Essayez Premium gratuitement pendant 7 jours… » (premium.trialHero) affichée quand un produit a hasFreeTrial. Le mécanisme essai→payant = Introductory Offer StoreKit (auto-détecté). i18n fr/en/es.
+- RAPPEL utilisateur : l'essai gratuit 7 jours DOIT être créé comme "Introductory Offer (Free, 1 week)" sur CHAQUE abonnement dans App Store Connect ; l'app l'affiche alors automatiquement.
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.

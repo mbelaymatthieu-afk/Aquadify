@@ -190,6 +190,12 @@ export default function PremiumScreen() {
           {IAP_ENABLED ? (
             <>
               <Text style={styles.planLabel}>{t("premium.choosePlan")}</Text>
+              {products.some((p) => p.hasFreeTrial) && (
+                <View style={styles.trialHero} testID="premium-trial-hero">
+                  <Ionicons name="gift" size={20} color={colors.white} />
+                  <Text style={styles.trialHeroText}>{t("premium.trialHero")}</Text>
+                </View>
+              )}
               {loadingProducts ? (
                 <View style={styles.loadingBox}>
                   <ActivityIndicator color={colors.primary} />
@@ -403,4 +409,15 @@ const styles = StyleSheet.create({
     borderColor: "rgba(255,255,255,0.35)",
   },
   manageBtnText: { color: colors.white, fontSize: font.small, fontWeight: "700" },
+  trialHero: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.success,
+    borderRadius: radius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+    marginBottom: spacing.sm,
+  },
+  trialHeroText: { flex: 1, color: colors.white, fontSize: font.small, fontWeight: "800" },
 });

@@ -20,7 +20,6 @@ import WaterMap from "@/src/components/WaterMap";
 import { useToast } from "@/src/components/Toast";
 import { fetchWaterPoints, WaterPoint } from "@/src/api/waterpoints";
 import { formatDistance, formatWalkTime } from "@/src/lib/geo";
-import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
@@ -41,8 +40,6 @@ export default function WaterPointsScreen() {
   const router = useRouter();
   const { t } = useI18n();
   const toast = useToast();
-  const { user } = useAuth();
-  const premium = !!user?.is_premium;
 
   const [status, setStatus] = useState<Status>("idle");
   const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
@@ -111,19 +108,7 @@ export default function WaterPointsScreen() {
         </View>
       </LinearGradient>
 
-      {!premium ? (
-        <View style={styles.gate} testID="wp-locked">
-          <View style={styles.gateIcon}>
-            <Ionicons name="lock-closed" size={34} color={colors.primary} />
-          </View>
-          <Text style={styles.gateTitle}>{t("waterPoints.lockedTitle")}</Text>
-          <Text style={styles.gateBody}>{t("waterPoints.lockedBody")}</Text>
-          <Pressable testID="wp-unlock" onPress={() => router.push("/premium")} style={styles.primaryBtn}>
-            <Ionicons name="sparkles" size={18} color={colors.white} />
-            <Text style={styles.primaryBtnText}>{t("waterPoints.unlock")}</Text>
-          </Pressable>
-        </View>
-      ) : status !== "granted" ? (
+      {status !== "granted" ? (
         <View style={styles.gate} testID="wp-permission-gate">
           <View style={styles.gateIcon}>
             <Ionicons name="location" size={34} color={colors.primary} />
