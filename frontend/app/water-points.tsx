@@ -25,8 +25,11 @@ import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
 type Status = "idle" | "granted" | "denied" | "blocked";
 
-// A distinct icon per water-point category (not just a generic fountain).
-const KIND_ICON: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
+// Une icône différente selon le type de point d'eau.
+const KIND_ICON: Record<
+  string,
+  keyof typeof MaterialCommunityIcons.glyphMap
+> = {
   fountain: "fountain",
   drinking_water: "cup-water",
   tap: "water-pump",
@@ -42,7 +45,11 @@ export default function WaterPointsScreen() {
   const toast = useToast();
 
   const [status, setStatus] = useState<Status>("idle");
-  const [coords, setCoords] = useState<{ lat: number; lon: number } | null>(null);
+  const [coords, setCoords] = useState<{
+    lat: number;
+    lon: number;
+  } | null>(null);
+
   const [points, setPoints] = useState<WaterPoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -54,11 +61,17 @@ export default function WaterPointsScreen() {
   const loadPoints = useCallback(async () => {
     setLoading(true);
     setError(false);
+
     try {
-      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+
       const lat = pos.coords.latitude;
       const lon = pos.coords.longitude;
+
       setCoords({ lat, lon });
+
       const pts = await fetchWaterPoints(lat, lon);
       setPoints(pts);
     } catch (e: any) {
@@ -72,7 +85,11 @@ export default function WaterPointsScreen() {
   const requestLocation = useCallback(async () => {
     const cur = await Location.getForegroundPermissionsAsync();
     let res = cur;
-    if (!cur.granted && cur.canAskAgain) res = await Location.requestForegroundPermissionsAsync();
+
+    if (!cur.granted && cur.canAskAgain) {
+      res = await Location.requestForegroundPermissionsAsync();
+    }
+
     if (res.granted) {
       setStatus("granted");
       loadPoints();
@@ -86,6 +103,7 @@ export default function WaterPointsScreen() {
       Platform.OS === "ios"
         ? `https://maps.apple.com/?daddr=${p.lat},${p.lon}`
         : `https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lon}`;
+
     Linking.openURL(url);
   };
 
@@ -96,95 +114,269 @@ export default function WaterPointsScreen() {
 
   return (
     <View style={[styles.flex, { backgroundColor: colors.bg }]}>
-      <LinearGradient colors={[colors.gradTop, colors.gradBottom]} style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+      <LinearGradient
+        colors={[colors.gradTop, colors.gradBottom]}
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + spacing.sm,
+          },
+        ]}
+      >
         <View style={styles.headerRow}>
-          <Pressable testID="wp-back" onPress={() => router.back()} hitSlop={10} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={24} color={colors.white} />
+          <Pressable
+            testID="wp-back"
+            onPress={() => router.back()}
+            hitSlop={10}
+            style={styles.backBtn}
+          >
+            <Ionicons
+              name="chevron-back"
+              size={24}
+              color={colors.white}
+            />
           </Pressable>
+
           <View style={{ flex: 1 }}>
-            <Text style={styles.headerTitle}>{t("waterPoints.title")}</Text>
-            <Text style={styles.headerSub}>{t("waterPoints.subtitle")}</Text>
+            <Text style={styles.headerTitle}>
+              {t("waterPoints.title")}
+            </Text>
+
+            <Text style={styles.headerSub}>
+              {t("waterPoints.subtitle")}
+            </Text>
           </View>
         </View>
       </LinearGradient>
 
       {status !== "granted" ? (
-        <View style={styles.gate} testID="wp-permission-gate">
+        <View
+          style={styles.gate}
+          testID="wp-permission-gate"
+        >
           <View style={styles.gateIcon}>
-            <Ionicons name="location" size={34} color={colors.primary} />
+            <Ionicons
+              name="location"
+              size={34}
+              color={colors.primary}
+            />
           </View>
-          <Text style={styles.gateTitle}>{t("waterPoints.permTitle")}</Text>
-          <Text style={styles.gateBody}>{t("waterPoints.permBody")}</Text>
+
+          <Text style={styles.gateTitle}>
+            {t("waterPoints.permTitle")}
+          </Text>
+
+          <Text style={styles.gateBody}>
+            {t("waterPoints.permBody")}
+          </Text>
+
           {status === "blocked" ? (
             <>
-              <Text style={styles.deniedText}>{t("waterPoints.denied")}</Text>
-              <Pressable testID="wp-open-settings" onPress={() => Linking.openSettings()} style={styles.primaryBtn}>
-                <Text style={styles.primaryBtnText}>{t("waterPoints.openSettings")}</Text>
+              <Text style={styles.deniedText}>
+                {t("waterPoints.denied")}
+              </Text>
+
+              <Pressable
+                testID="wp-open-settings"
+                onPress={() => Linking.openSettings()}
+                style={styles.primaryBtn}
+              >
+                <Text style={styles.primaryBtnText}>
+                  {t("waterPoints.openSettings")}
+                </Text>
               </Pressable>
             </>
           ) : (
-            <Pressable testID="wp-allow" onPress={requestLocation} style={styles.primaryBtn}>
-              <Ionicons name="navigate" size={18} color={colors.white} />
-              <Text style={styles.primaryBtnText}>{t("common.continue")}</Text>
+            <Pressable
+              testID="wp-allow"
+              onPress={requestLocation}
+              style={styles.primaryBtn}
+            >
+              <Ionicons
+                name="navigate"
+                size={18}
+                color={colors.white}
+              />
+
+              <Text style={styles.primaryBtnText}>
+                {t("common.continue")}
+              </Text>
             </Pressable>
           )}
-          {status === "denied" && <Text style={styles.deniedText}>{t("waterPoints.denied")}</Text>}
+
+          {status === "denied" && (
+            <Text style={styles.deniedText}>
+              {t("waterPoints.denied")}
+            </Text>
+          )}
         </View>
       ) : (
         <>
           <View style={styles.mapWrap}>
-            {coords && <WaterMap lat={coords.lat} lon={coords.lon} points={top3} onSelect={openDirections} />}
-            <Text style={styles.attribution}>{t("waterPoints.attribution")}</Text>
+            {coords && (
+              <WaterMap
+                lat={coords.lat}
+                lon={coords.lon}
+                points={top3}
+                onSelect={openDirections}
+              />
+            )}
+
+            <Text style={styles.attribution}>
+              {t("waterPoints.attribution")}
+            </Text>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: spacing.md, paddingBottom: insets.bottom + spacing.lg }}>
+          <ScrollView
+            contentContainerStyle={{
+              padding: spacing.md,
+              paddingBottom: insets.bottom + spacing.lg,
+            }}
+          >
             {loading ? (
               <View style={styles.loadingBox}>
                 <ActivityIndicator color={colors.primary} />
-                <Text style={styles.muted}>{t("waterPoints.loading")}</Text>
+
+                <Text style={styles.muted}>
+                  {t("waterPoints.loading")}
+                </Text>
               </View>
             ) : error ? (
-              <View style={styles.loadingBox} testID="wp-error">
-                <Ionicons name="cloud-offline-outline" size={30} color={colors.textMuted} />
-                <Text style={styles.muted}>{t("waterPoints.fetchError")}</Text>
-                <Pressable testID="wp-retry" onPress={loadPoints} style={styles.retryBtn}>
-                  <Ionicons name="refresh" size={16} color={colors.white} />
-                  <Text style={styles.retryText}>{t("common.retry")}</Text>
+              <View
+                style={styles.loadingBox}
+                testID="wp-error"
+              >
+                <Ionicons
+                  name="cloud-offline-outline"
+                  size={30}
+                  color={colors.textMuted}
+                />
+
+                <Text style={styles.muted}>
+                  {t("waterPoints.fetchError")}
+                </Text>
+
+                <Pressable
+                  testID="wp-retry"
+                  onPress={loadPoints}
+                  style={styles.retryBtn}
+                >
+                  <Ionicons
+                    name="refresh"
+                    size={16}
+                    color={colors.white}
+                  />
+
+                  <Text style={styles.retryText}>
+                    {t("common.retry")}
+                  </Text>
                 </Pressable>
               </View>
             ) : top3.length === 0 ? (
-              <Text style={styles.muted} testID="wp-empty">{t("waterPoints.empty")}</Text>
+              <Text
+                style={styles.muted}
+                testID="wp-empty"
+              >
+                {t("waterPoints.empty")}
+              </Text>
             ) : (
               <>
-                <Text style={styles.nearestTitle}>{t("waterPoints.nearest")}</Text>
+                <Text style={styles.nearestTitle}>
+                  {t("waterPoints.nearest")}
+                </Text>
+
                 {top3.map((p) => (
-                  <View key={p.id} style={styles.card} testID={`wp-item-${p.id}`}>
+                  <View
+                    key={p.id}
+                    style={styles.card}
+                    testID={`wp-item-${p.id}`}
+                  >
                     <View style={styles.wpIcon}>
                       <MaterialCommunityIcons
-                        name={KIND_ICON[p.kind] || "water"}
+                        name={
+                          KIND_ICON[p.kind] ||
+                          "water"
+                        }
                         size={22}
                         color={colors.primary}
                       />
                     </View>
-                    <Pressable style={{ flex: 1 }} testID={`wp-info-${p.id}`} onPress={() => setDetailFor(p)}>
-                      <Text style={styles.wpName} numberOfLines={1}>
-                        {p.name || t(`waterPoints.kinds.${p.kind}`)}
+
+                    <Pressable
+                      style={{ flex: 1 }}
+                      testID={`wp-info-${p.id}`}
+                      onPress={() =>
+                        setDetailFor(p)
+                      }
+                    >
+                      <Text
+                        style={styles.wpName}
+                        numberOfLines={1}
+                      >
+                        {p.name ||
+                          t(
+                            `waterPoints.kinds.${p.kind}`,
+                          )}
                       </Text>
+
                       <View style={styles.wpMetaRow}>
-                        <Ionicons name="location-outline" size={13} color={colors.textMuted} />
-                        <Text style={styles.wpDist}>{formatDistance(p.distance)}</Text>
-                        <Text style={styles.wpDot}>•</Text>
-                        <Ionicons name="walk-outline" size={13} color={colors.textMuted} />
+                        <Ionicons
+                          name="location-outline"
+                          size={13}
+                          color={colors.textMuted}
+                        />
+
                         <Text style={styles.wpDist}>
-                          {formatWalkTime(p.distance)} {t("waterPoints.walk")}
+                          {formatDistance(
+                            p.distance,
+                          )}
+                        </Text>
+
+                        <Text style={styles.wpDot}>
+                          •
+                        </Text>
+
+                        <Ionicons
+                          name="walk-outline"
+                          size={13}
+                          color={colors.textMuted}
+                        />
+
+                        <Text style={styles.wpDist}>
+                          {formatWalkTime(
+                            p.distance,
+                          )}{" "}
+                          {t("waterPoints.walk")}
                         </Text>
                       </View>
                     </Pressable>
-                    <Pressable testID={`wp-dir-${p.id}`} onPress={() => openDirections(p)} style={styles.iconBtn}>
-                      <Ionicons name="navigate" size={18} color={colors.white} />
+
+                    <Pressable
+                      testID={`wp-dir-${p.id}`}
+                      onPress={() =>
+                        openDirections(p)
+                      }
+                      style={styles.iconBtn}
+                    >
+                      <Ionicons
+                        name="navigate"
+                        size={18}
+                        color={colors.white}
+                      />
                     </Pressable>
-                    <Pressable testID={`wp-report-${p.id}`} onPress={() => setReportFor(p)} style={styles.reportBtn}>
-                      <Ionicons name="flag-outline" size={18} color={colors.danger} />
+
+                    <Pressable
+                      testID={`wp-report-${p.id}`}
+                      onPress={() =>
+                        setReportFor(p)
+                      }
+                      style={styles.reportBtn}
+                    >
+                      <Ionicons
+                        name="flag-outline"
+                        size={18}
+                        color={colors.danger}
+                      />
                     </Pressable>
                   </View>
                 ))}
@@ -194,56 +386,147 @@ export default function WaterPointsScreen() {
         </>
       )}
 
-      <Modal visible={!!reportFor} transparent animationType="fade" onRequestClose={() => setReportFor(null)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setReportFor(null)}>
-          <View style={styles.sheet} testID="wp-report-sheet">
-            <Text style={styles.sheetTitle}>{t("waterPoints.reportTitle")}</Text>
-            {(["reportAbsent", "reportClosed", "reportBroken"] as const).map((k) => (
-              <Pressable key={k} testID={`wp-report-${k}`} onPress={submitReport} style={styles.sheetRow}>
-                <Ionicons name="alert-circle-outline" size={20} color={colors.primary} />
-                <Text style={styles.sheetRowText}>{t(`waterPoints.${k}`)}</Text>
+      <Modal
+        visible={!!reportFor}
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setReportFor(null)
+        }
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setReportFor(null)}
+        >
+          <View
+            style={styles.sheet}
+            testID="wp-report-sheet"
+          >
+            <Text style={styles.sheetTitle}>
+              {t("waterPoints.reportTitle")}
+            </Text>
+
+            {(
+              [
+                "reportAbsent",
+                "reportClosed",
+                "reportBroken",
+              ] as const
+            ).map((k) => (
+              <Pressable
+                key={k}
+                testID={`wp-report-${k}`}
+                onPress={submitReport}
+                style={styles.sheetRow}
+              >
+                <Ionicons
+                  name="alert-circle-outline"
+                  size={20}
+                  color={colors.primary}
+                />
+
+                <Text
+                  style={styles.sheetRowText}
+                >
+                  {t(`waterPoints.${k}`)}
+                </Text>
               </Pressable>
             ))}
           </View>
         </Pressable>
       </Modal>
 
-      <Modal visible={!!detailFor} transparent animationType="fade" onRequestClose={() => setDetailFor(null)}>
-        <Pressable style={styles.modalOverlay} onPress={() => setDetailFor(null)}>
-          <View style={styles.sheet} testID="wp-detail-sheet">
+      <Modal
+        visible={!!detailFor}
+        transparent
+        animationType="fade"
+        onRequestClose={() =>
+          setDetailFor(null)
+        }
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setDetailFor(null)}
+        >
+          <View
+            style={styles.sheet}
+            testID="wp-detail-sheet"
+          >
             <View style={styles.detailHeader}>
               <View style={styles.wpIcon}>
                 <MaterialCommunityIcons
-                  name={detailFor ? KIND_ICON[detailFor.kind] || "water" : "water"}
+                  name={
+                    detailFor
+                      ? KIND_ICON[
+                          detailFor.kind
+                        ] || "water"
+                      : "water"
+                  }
                   size={22}
                   color={colors.primary}
                 />
               </View>
+
               <Text style={styles.sheetTitle}>
-                {detailFor?.name || (detailFor ? t(`waterPoints.kinds.${detailFor.kind}`) : "")}
+                {detailFor?.name ||
+                  (detailFor
+                    ? t(
+                        `waterPoints.kinds.${detailFor.kind}`,
+                      )
+                    : "")}
               </Text>
             </View>
+
             {!!detailFor?.address && (
               <Text style={styles.detailLine}>
-                <Text style={styles.detailLabel}>{t("waterPoints.addressLabel")}: </Text>
+                <Text
+                  style={styles.detailLabel}
+                >
+                  {t(
+                    "waterPoints.addressLabel",
+                  )}
+                  :{" "}
+                </Text>
+
                 {detailFor.address}
               </Text>
             )}
+
             {!!detailFor && (
               <Text style={styles.detailLine}>
-                {formatDistance(detailFor.distance)} • {formatWalkTime(detailFor.distance)} {t("waterPoints.walk")}
+                {formatDistance(
+                  detailFor.distance,
+                )}{" "}
+                •{" "}
+                {formatWalkTime(
+                  detailFor.distance,
+                )}{" "}
+                {t("waterPoints.walk")}
               </Text>
             )}
+
             <Pressable
               testID="wp-detail-directions"
               onPress={() => {
-                if (detailFor) openDirections(detailFor);
+                if (detailFor) {
+                  openDirections(detailFor);
+                }
+
                 setDetailFor(null);
               }}
               style={styles.primaryBtn}
             >
-              <Ionicons name="navigate" size={18} color={colors.white} />
-              <Text style={styles.primaryBtnText}>{t("waterPoints.directions")}</Text>
+              <Ionicons
+                name="navigate"
+                size={18}
+                color={colors.white}
+              />
+
+              <Text style={styles.primaryBtnText}>
+                {t(
+                  "waterPoints.directions",
+                )}
+              </Text>
             </Pressable>
           </View>
         </Pressable>
@@ -253,29 +536,176 @@ export default function WaterPointsScreen() {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  header: { paddingHorizontal: spacing.md, paddingBottom: spacing.md, borderBottomLeftRadius: radius.lg, borderBottomRightRadius: radius.lg },
-  headerRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  headerTitle: { color: colors.white, fontSize: font.h2, fontWeight: "800" },
-  headerSub: { color: "rgba(255,255,255,0.85)", fontSize: font.tiny },
-  gate: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.lg, gap: spacing.sm },
-  gateIcon: { width: 72, height: 72, borderRadius: radius.pill, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center", marginBottom: spacing.sm },
-  gateTitle: { fontSize: font.h2, fontWeight: "800", color: colors.text, textAlign: "center" },
-  gateBody: { fontSize: font.small, color: colors.textSecondary, textAlign: "center", lineHeight: 20, marginBottom: spacing.md },
-  deniedText: { fontSize: font.small, color: colors.danger, textAlign: "center", marginTop: spacing.sm },
-  primaryBtn: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.primary, borderRadius: radius.pill, minHeight: 52, paddingHorizontal: spacing.xl, justifyContent: "center", ...shadow.button },
-  primaryBtnText: { color: colors.white, fontSize: font.body, fontWeight: "700" },
-  mapWrap: { height: 240, margin: spacing.md, borderRadius: radius.lg, overflow: "hidden", ...shadow.soft },
-  attribution: { position: "absolute", bottom: 4, right: 6, fontSize: 9, color: colors.textMuted, backgroundColor: "rgba(255,255,255,0.7)", paddingHorizontal: 4, borderRadius: 4 },
-  loadingBox: { alignItems: "center", gap: spacing.sm, paddingVertical: spacing.xl },
-  muted: { color: colors.textMuted, fontSize: font.small, textAlign: "center", paddingVertical: spacing.lg },
-  card: { flexDirection: "row", alignItems: "center", gap: spacing.sm, backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.sm, ...shadow.soft },
-  wpIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.primarySoft, alignItems: "center", justifyContent: "center" },
-  wpName: { fontSize: font.body, fontWeight: "700", color: colors.text },
-  wpMetaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
-  wpDist: { fontSize: font.tiny, color: colors.textMuted },
-  wpDot: { fontSize: font.tiny, color: colors.textMuted, marginHorizontal: 2 },
+  flex: {
+    flex: 1,
+  },
+
+  header: {
+    paddingHorizontal: spacing.md,
+    paddingBottom: spacing.md,
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+  },
+
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+
+  backBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  headerTitle: {
+    color: colors.white,
+    fontSize: font.h2,
+    fontWeight: "800",
+  },
+
+  headerSub: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: font.tiny,
+  },
+
+  gate: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: spacing.lg,
+    gap: spacing.sm,
+  },
+
+  gateIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: spacing.sm,
+  },
+
+  gateTitle: {
+    fontSize: font.h2,
+    fontWeight: "800",
+    color: colors.text,
+    textAlign: "center",
+  },
+
+  gateBody: {
+    fontSize: font.small,
+    color: colors.textSecondary,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: spacing.md,
+  },
+
+  deniedText: {
+    fontSize: font.small,
+    color: colors.danger,
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+
+  primaryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    minHeight: 52,
+    paddingHorizontal: spacing.xl,
+    justifyContent: "center",
+    ...shadow.button,
+  },
+
+  primaryBtnText: {
+    color: colors.white,
+    fontSize: font.body,
+    fontWeight: "700",
+  },
+
+  mapWrap: {
+    height: 240,
+    margin: spacing.md,
+    borderRadius: radius.lg,
+    overflow: "hidden",
+    ...shadow.soft,
+  },
+
+  attribution: {
+    position: "absolute",
+    bottom: 4,
+    right: 6,
+    fontSize: 9,
+    color: colors.textMuted,
+    backgroundColor:
+      "rgba(255,255,255,0.7)",
+    paddingHorizontal: 4,
+    borderRadius: 4,
+  },
+
+  loadingBox: {
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.xl,
+  },
+
+  muted: {
+    color: colors.textMuted,
+    fontSize: font.small,
+    textAlign: "center",
+    paddingVertical: spacing.lg,
+  },
+
+  card: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadow.soft,
+  },
+
+  wpIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: colors.primarySoft,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  wpName: {
+    fontSize: font.body,
+    fontWeight: "700",
+    color: colors.text,
+  },
+
+  wpMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+
+  wpDist: {
+    fontSize: font.tiny,
+    color: colors.textMuted,
+  },
+
+  wpDot: {
+    fontSize: font.tiny,
+    color: colors.textMuted,
+    marginHorizontal: 2,
+  },
+
   nearestTitle: {
     fontSize: font.tiny,
     fontWeight: "800",
@@ -285,14 +715,65 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
   },
-  iconBtn: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: colors.primary, alignItems: "center", justifyContent: "center" },
-  reportBtn: { width: 40, height: 40, borderRadius: radius.pill, backgroundColor: "#FEE2E2", alignItems: "center", justifyContent: "center" },
-  modalOverlay: { flex: 1, backgroundColor: colors.overlay, justifyContent: "flex-end" },
-  sheet: { backgroundColor: colors.card, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, paddingBottom: spacing.xxl },
-  sheetTitle: { fontSize: font.h3, fontWeight: "800", color: colors.text, marginBottom: spacing.md },
-  detailHeader: { flexDirection: "row", alignItems: "center", gap: spacing.sm, marginBottom: spacing.sm },
-  detailLine: { fontSize: font.small, color: colors.textSecondary, marginBottom: spacing.sm, lineHeight: 20 },
-  detailLabel: { fontWeight: "800", color: colors.text },
+
+  iconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  reportBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.pill,
+    backgroundColor: "#FEE2E2",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: colors.overlay,
+    justifyContent: "flex-end",
+  },
+
+  sheet: {
+    backgroundColor: colors.card,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    padding: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+
+  sheetTitle: {
+    fontSize: font.h3,
+    fontWeight: "800",
+    color: colors.text,
+    marginBottom: spacing.md,
+  },
+
+  detailHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
+  },
+
+  detailLine: {
+    fontSize: font.small,
+    color: colors.textSecondary,
+    marginBottom: spacing.sm,
+    lineHeight: 20,
+  },
+
+  detailLabel: {
+    fontWeight: "800",
+    color: colors.text,
+  },
+
   retryBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -304,7 +785,25 @@ const styles = StyleSheet.create({
     minHeight: 44,
     justifyContent: "center",
   },
-  retryText: { color: colors.white, fontWeight: "700", fontSize: font.small },
-  sheetRow: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md, borderBottomWidth: 1, borderBottomColor: colors.border },
-  sheetRowText: { fontSize: font.body, color: colors.text, fontWeight: "600" },
+
+  retryText: {
+    color: colors.white,
+    fontWeight: "700",
+    fontSize: font.small,
+  },
+
+  sheetRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+
+  sheetRowText: {
+    fontSize: font.body,
+    color: colors.text,
+    fontWeight: "600",
+  },
 });
