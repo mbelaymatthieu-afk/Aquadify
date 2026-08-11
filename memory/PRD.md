@@ -156,6 +156,9 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 - Rendu unifié : displayPlans = (IAP_ENABLED && products>0) ? products : FALLBACK_PLANS. onSelectPlan : produit StoreKit réel -> buy() ; sinon (web/Android) -> subscribeStripe(). Sur iOS natif, prix StoreKit LIVE remplacent $3.99/$49.99.
 - Bouton Stripe unique supprimé (remplacé par les cartes de formule qui déclenchent Stripe hors iOS). Restore/Manage restent iOS-only. Clés premium.iapUnavailable + styles cta/ctaText désormais inutilisés.
 
+## Iteration 2026-08-11 (b) — Bannière pub sur Points d'eau
+- water-points.tsx : AdBanner ajouté en bas de l'écran (dans un View avec paddingBottom insets.bottom), au-dessus des modals. AdBanner gère déjà : null si Premium / Expo Go / web. S'affiche uniquement build natif pour utilisateurs gratuits. Cohérent avec Accueil/Progrès/Profil.
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.

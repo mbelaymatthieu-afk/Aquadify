@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import WaterMap from "@/src/components/WaterMap";
+import AdBanner from "@/src/components/AdBanner";
 import { useToast } from "@/src/components/Toast";
 import { fetchWaterPoints, WaterPoint } from "@/src/api/waterpoints";
 import { formatDistance, formatWalkTime } from "@/src/lib/geo";
@@ -193,6 +194,10 @@ export default function WaterPointsScreen() {
           </ScrollView>
         </>
       )}
+
+      <View style={{ paddingBottom: insets.bottom }}>
+        <AdBanner />
+      </View>
 
       <Modal visible={!!reportFor} transparent animationType="fade" onRequestClose={() => setReportFor(null)}>
         <Pressable style={styles.modalOverlay} onPress={() => setReportFor(null)}>
