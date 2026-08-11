@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import WaterMap from "@/src/components/WaterMap";
+import AdBanner from "@/src/components/AdBanner";
 import { useToast } from "@/src/components/Toast";
 import { fetchWaterPoints, WaterPoint } from "@/src/api/waterpoints";
 import { formatDistance, formatWalkTime } from "@/src/lib/geo";
@@ -25,7 +26,6 @@ import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
 type Status = "idle" | "granted" | "denied" | "blocked";
 
-// Une icône différente selon le type de point d'eau.
 const KIND_ICON: Record<
   string,
   keyof typeof MaterialCommunityIcons.glyphMap
@@ -45,6 +45,7 @@ export default function WaterPointsScreen() {
   const toast = useToast();
 
   const [status, setStatus] = useState<Status>("idle");
+
   const [coords, setCoords] = useState<{
     lat: number;
     lon: number;
@@ -293,10 +294,7 @@ export default function WaterPointsScreen() {
                   >
                     <View style={styles.wpIcon}>
                       <MaterialCommunityIcons
-                        name={
-                          KIND_ICON[p.kind] ||
-                          "water"
-                        }
+                        name={KIND_ICON[p.kind] || "water"}
                         size={22}
                         color={colors.primary}
                       />
@@ -305,18 +303,14 @@ export default function WaterPointsScreen() {
                     <Pressable
                       style={{ flex: 1 }}
                       testID={`wp-info-${p.id}`}
-                      onPress={() =>
-                        setDetailFor(p)
-                      }
+                      onPress={() => setDetailFor(p)}
                     >
                       <Text
                         style={styles.wpName}
                         numberOfLines={1}
                       >
                         {p.name ||
-                          t(
-                            `waterPoints.kinds.${p.kind}`,
-                          )}
+                          t(`waterPoints.kinds.${p.kind}`)}
                       </Text>
 
                       <View style={styles.wpMetaRow}>
@@ -327,14 +321,10 @@ export default function WaterPointsScreen() {
                         />
 
                         <Text style={styles.wpDist}>
-                          {formatDistance(
-                            p.distance,
-                          )}
+                          {formatDistance(p.distance)}
                         </Text>
 
-                        <Text style={styles.wpDot}>
-                          •
-                        </Text>
+                        <Text style={styles.wpDot}>•</Text>
 
                         <Ionicons
                           name="walk-outline"
@@ -343,9 +333,7 @@ export default function WaterPointsScreen() {
                         />
 
                         <Text style={styles.wpDist}>
-                          {formatWalkTime(
-                            p.distance,
-                          )}{" "}
+                          {formatWalkTime(p.distance)}{" "}
                           {t("waterPoints.walk")}
                         </Text>
                       </View>
@@ -353,9 +341,7 @@ export default function WaterPointsScreen() {
 
                     <Pressable
                       testID={`wp-dir-${p.id}`}
-                      onPress={() =>
-                        openDirections(p)
-                      }
+                      onPress={() => openDirections(p)}
                       style={styles.iconBtn}
                     >
                       <Ionicons
@@ -367,9 +353,7 @@ export default function WaterPointsScreen() {
 
                     <Pressable
                       testID={`wp-report-${p.id}`}
-                      onPress={() =>
-                        setReportFor(p)
-                      }
+                      onPress={() => setReportFor(p)}
                       style={styles.reportBtn}
                     >
                       <Ionicons
@@ -386,13 +370,15 @@ export default function WaterPointsScreen() {
         </>
       )}
 
+      <View style={{ paddingBottom: insets.bottom }}>
+        <AdBanner />
+      </View>
+
       <Modal
         visible={!!reportFor}
         transparent
         animationType="fade"
-        onRequestClose={() =>
-          setReportFor(null)
-        }
+        onRequestClose={() => setReportFor(null)}
       >
         <Pressable
           style={styles.modalOverlay}
@@ -425,9 +411,7 @@ export default function WaterPointsScreen() {
                   color={colors.primary}
                 />
 
-                <Text
-                  style={styles.sheetRowText}
-                >
+                <Text style={styles.sheetRowText}>
                   {t(`waterPoints.${k}`)}
                 </Text>
               </Pressable>
@@ -440,9 +424,7 @@ export default function WaterPointsScreen() {
         visible={!!detailFor}
         transparent
         animationType="fade"
-        onRequestClose={() =>
-          setDetailFor(null)
-        }
+        onRequestClose={() => setDetailFor(null)}
       >
         <Pressable
           style={styles.modalOverlay}
@@ -457,9 +439,7 @@ export default function WaterPointsScreen() {
                 <MaterialCommunityIcons
                   name={
                     detailFor
-                      ? KIND_ICON[
-                          detailFor.kind
-                        ] || "water"
+                      ? KIND_ICON[detailFor.kind] || "water"
                       : "water"
                   }
                   size={22}
@@ -470,22 +450,15 @@ export default function WaterPointsScreen() {
               <Text style={styles.sheetTitle}>
                 {detailFor?.name ||
                   (detailFor
-                    ? t(
-                        `waterPoints.kinds.${detailFor.kind}`,
-                      )
+                    ? t(`waterPoints.kinds.${detailFor.kind}`)
                     : "")}
               </Text>
             </View>
 
             {!!detailFor?.address && (
               <Text style={styles.detailLine}>
-                <Text
-                  style={styles.detailLabel}
-                >
-                  {t(
-                    "waterPoints.addressLabel",
-                  )}
-                  :{" "}
+                <Text style={styles.detailLabel}>
+                  {t("waterPoints.addressLabel")}:{" "}
                 </Text>
 
                 {detailFor.address}
@@ -494,13 +467,8 @@ export default function WaterPointsScreen() {
 
             {!!detailFor && (
               <Text style={styles.detailLine}>
-                {formatDistance(
-                  detailFor.distance,
-                )}{" "}
-                •{" "}
-                {formatWalkTime(
-                  detailFor.distance,
-                )}{" "}
+                {formatDistance(detailFor.distance)} •{" "}
+                {formatWalkTime(detailFor.distance)}{" "}
                 {t("waterPoints.walk")}
               </Text>
             )}
@@ -523,9 +491,7 @@ export default function WaterPointsScreen() {
               />
 
               <Text style={styles.primaryBtnText}>
-                {t(
-                  "waterPoints.directions",
-                )}
+                {t("waterPoints.directions")}
               </Text>
             </Pressable>
           </View>
@@ -643,8 +609,7 @@ const styles = StyleSheet.create({
     right: 6,
     fontSize: 9,
     color: colors.textMuted,
-    backgroundColor:
-      "rgba(255,255,255,0.7)",
+    backgroundColor: "rgba(255,255,255,0.7)",
     paddingHorizontal: 4,
     borderRadius: 4,
   },
