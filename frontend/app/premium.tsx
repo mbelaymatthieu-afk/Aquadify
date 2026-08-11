@@ -17,6 +17,8 @@ import { colors, font, radius, shadow, spacing } from "@/src/theme";
 import {
   IAP_ENABLED,
   IapProduct,
+  SKU_MONTHLY,
+  SKU_YEARLY,
   addPurchaseListeners,
   finishPurchase,
   getSubscriptions,
@@ -26,6 +28,14 @@ import {
 } from "@/src/lib/iap";
 
 const ORIGIN = "https://drip-track-1.emergent.host";
+
+// Shown when StoreKit isn't available (web / Android / Expo Go) so the
+// subscription offer is always visible — e.g. for App Store / Play Store
+// review screenshots. On a real iOS build, live StoreKit prices replace these.
+const FALLBACK_PLANS: IapProduct[] = [
+  { id: SKU_MONTHLY, title: "Mensuel", displayPrice: "$3.99", hasFreeTrial: true, raw: null },
+  { id: SKU_YEARLY, title: "Annuel", displayPrice: "$49.99", hasFreeTrial: true, raw: null },
+];
 
 export default function PremiumScreen() {
   const insets = useSafeAreaInsets();
@@ -164,6 +174,16 @@ export default function PremiumScreen() {
 
   const isYearly = (id: string) => id.toLowerCase().includes("year");
 
+  // Real StoreKit products when available; otherwise the static offer preview.
+  const displayPlans = IAP_ENABLED && products.length > 0 ? products : FALLBACK_PLANS;
+
+  const onSelectPlan = (p: IapProduct) => {
+    // Live StoreKit product -> native purchase. Otherwise (web / Android) fall
+    // back to the Stripe checkout. iOS always has live products, so StoreKit.
+    if (IAP_ENABLED && p.raw) return buy(p.id);
+    return subscribeStripe();
+  };
+
   return (
     <LinearGradient colors={[colors.gradTop, colors.gradBottom]} style={styles.flex}>
       <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md }]}>
@@ -187,86 +207,64 @@ export default function PremiumScreen() {
             </View>
           ))}
 
-          {IAP_ENABLED ? (
-            <>
-              <Text style={styles.planLabel}>{t("premium.choosePlan")}</Text>
-              {products.some((p) => p.hasFreeTrial) && (
-                <View style={styles.trialHero} testID="premium-trial-hero">
-                  <Ionicons name="gift" size={20} color={colors.white} />
-                  <Text style={styles.trialHeroText}>{t("premium.trialHero")}</Text>
-                </View>
-              )}
-              {loadingProducts ? (
-                <View style={styles.loadingBox}>
-                  <ActivityIndicator color={colors.primary} />
-                  <Text style={styles.loadingText}>{t("premium.loadingProducts")}</Text>
-                </View>
-              ) : products.length === 0 ? (
-                <Text style={styles.loadingText}>{t("premium.iapUnavailable")}</Text>
-              ) : (
-                products.map((p) => (
-                  <Pressable
-                    key={p.id}
-                    testID={`premium-plan-${isYearly(p.id) ? "yearly" : "monthly"}`}
-                    onPress={() => buy(p.id)}
-                    disabled={busy}
-                    style={({ pressed }) => [
-                      styles.planRow,
-                      isYearly(p.id) && styles.planRowBest,
-                      pressed && { opacity: 0.9 },
-                    ]}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text style={styles.planTitle}>
-                        {isYearly(p.id) ? t("premium.yearly") : t("premium.monthly")}
-                      </Text>
-                      <View style={styles.badgeRow}>
-                        {isYearly(p.id) && (
-                          <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{t("premium.bestValue")}</Text>
-                          </View>
-                        )}
-                        {p.hasFreeTrial && (
-                          <View style={styles.trialBadge}>
-                            <Text style={styles.trialBadgeText}>{t("premium.trialBadge")}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                    <View style={styles.planPriceCol}>
-                      <Text style={styles.planPrice}>{p.displayPrice}</Text>
-                      <Text style={styles.planPeriod}>
-                        {isYearly(p.id) ? t("premium.perYear") : t("premium.perMonth")}
-                      </Text>
-                    </View>
-                  </Pressable>
-                ))
-              )}
-
-              {busy && <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.primary} />}
-
-              {products.some((p) => p.hasFreeTrial) && (
-                <Text style={styles.trialNote}>{t("premium.trialNote")}</Text>
-              )}
-              <Text style={styles.cancelNote}>{t("premium.cancelNote")}</Text>
-            </>
-          ) : (
-            <Pressable
-              testID="premium-subscribe-button"
-              onPress={subscribeStripe}
-              disabled={busy}
-              style={({ pressed }) => [styles.cta, pressed && { opacity: 0.9 }]}
-            >
-              {busy ? (
-                <ActivityIndicator color={colors.white} />
-              ) : (
-                <>
-                  <Ionicons name="sparkles" size={18} color={colors.white} />
-                  <Text style={styles.ctaText}>{t("premium.cta")}</Text>
-                </>
-              )}
-            </Pressable>
+          <Text style={styles.planLabel}>{t("premium.choosePlan")}</Text>
+          {displayPlans.some((p) => p.hasFreeTrial) && (
+            <View style={styles.trialHero} testID="premium-trial-hero">
+              <Ionicons name="gift" size={20} color={colors.white} />
+              <Text style={styles.trialHeroText}>{t("premium.trialHero")}</Text>
+            </View>
           )}
+          {IAP_ENABLED && loadingProducts ? (
+            <View style={styles.loadingBox}>
+              <ActivityIndicator color={colors.primary} />
+              <Text style={styles.loadingText}>{t("premium.loadingProducts")}</Text>
+            </View>
+          ) : (
+            displayPlans.map((p) => (
+              <Pressable
+                key={p.id}
+                testID={`premium-plan-${isYearly(p.id) ? "yearly" : "monthly"}`}
+                onPress={() => onSelectPlan(p)}
+                disabled={busy}
+                style={({ pressed }) => [
+                  styles.planRow,
+                  isYearly(p.id) && styles.planRowBest,
+                  pressed && { opacity: 0.9 },
+                ]}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.planTitle}>
+                    {isYearly(p.id) ? t("premium.yearly") : t("premium.monthly")}
+                  </Text>
+                  <View style={styles.badgeRow}>
+                    {isYearly(p.id) && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{t("premium.bestValue")}</Text>
+                      </View>
+                    )}
+                    {p.hasFreeTrial && (
+                      <View style={styles.trialBadge}>
+                        <Text style={styles.trialBadgeText}>{t("premium.trialBadge")}</Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.planPriceCol}>
+                  <Text style={styles.planPrice}>{p.displayPrice}</Text>
+                  <Text style={styles.planPeriod}>
+                    {isYearly(p.id) ? t("premium.perYear") : t("premium.perMonth")}
+                  </Text>
+                </View>
+              </Pressable>
+            ))
+          )}
+
+          {busy && <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.primary} />}
+
+          {displayPlans.some((p) => p.hasFreeTrial) && (
+            <Text style={styles.trialNote}>{t("premium.trialNote")}</Text>
+          )}
+          <Text style={styles.cancelNote}>{t("premium.cancelNote")}</Text>
         </View>
 
         {IAP_ENABLED && user?.is_premium && (
