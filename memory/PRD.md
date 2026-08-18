@@ -159,6 +159,13 @@ payments: POST /payments/checkout/session {kind:"premium",origin_url}, GET /paym
 ## Iteration 2026-08-11 (b) — Bannière pub sur Points d'eau
 - water-points.tsx : AdBanner ajouté en bas de l'écran (dans un View avec paddingBottom insets.bottom), au-dessus des modals. AdBanner gère déjà : null si Premium / Expo Go / web. S'affiche uniquement build natif pour utilisateurs gratuits. Cohérent avec Accueil/Progrès/Profil.
 
+## Iteration 2026-08-18 — FIX critique : iOS n'ouvre plus JAMAIS Stripe (StoreKit only)
+- RÉGRESSION introduite le 08-11 : FALLBACK_PLANS avec onSelectPlan -> subscribeStripe() quand produit sans .raw. Sur iOS (Expo Go OU build sans produits chargés), le tap ouvrait checkout.stripe.com (violation Apple 3.1.1) + mensuel/annuel = même lien Stripe premium.
+- FIX premium.tsx : onSelectPlan -> Platform.OS==='ios' ? buy(p.id) : subscribeStripe(). iOS force StoreKit avec SKU distinct (monthly/yearly). buy() : si !IAP_ENABLED (Expo Go/web) -> toast premium.iapNeedsBuild (StoreKit indisponible hors build natif) au lieu de retomber sur Stripe.
+- FALLBACK prices -> 4,99 € / 49,99 € (affichage web/Expo Go seulement ; en build natif = prix live StoreKit App Store Connect, 175 pays gérés côté Apple).
+- i18n premium.iapNeedsBuild fr/en/es.
+- CAUSE du bug utilisateur : test en Expo Go = StoreKit impossible. Doit builder (TestFlight) + tester avec compte Sandbox ; abonnements App Store Connect "Ready to Submit", même groupe, 175 pays + prix configurés.
+
 ## Backlog / Next
 - P1: Apple Health / Google Fit connect (backend /health/* exists, mocked).
 - P1: Edit profile (recompute goal) screen from Profil.
