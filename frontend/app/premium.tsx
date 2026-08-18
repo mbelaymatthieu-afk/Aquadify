@@ -3,7 +3,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Mascot } from "@/src/components/Mascot";
@@ -33,8 +33,8 @@ const ORIGIN = "https://drip-track-1.emergent.host";
 // subscription offer is always visible — e.g. for App Store / Play Store
 // review screenshots. On a real iOS build, live StoreKit prices replace these.
 const FALLBACK_PLANS: IapProduct[] = [
-  { id: SKU_MONTHLY, title: "Mensuel", displayPrice: "$3.99", hasFreeTrial: true, raw: null },
-  { id: SKU_YEARLY, title: "Annuel", displayPrice: "$49.99", hasFreeTrial: true, raw: null },
+  { id: SKU_MONTHLY, title: "Mensuel", displayPrice: "4,99 €", hasFreeTrial: true, raw: null },
+  { id: SKU_YEARLY, title: "Annuel", displayPrice: "49,99 €", hasFreeTrial: true, raw: null },
 ];
 
 export default function PremiumScreen() {
@@ -108,6 +108,12 @@ export default function PremiumScreen() {
   }, []);
 
   const buy = async (sku: string) => {
+    // App Store rule: iOS must use StoreKit only. StoreKit is unavailable in
+    // Expo Go / web — the user must install a real build (TestFlight/App Store).
+    if (!IAP_ENABLED) {
+      toast.show(t("premium.iapNeedsBuild"), "info");
+      return;
+    }
     setBusy(true);
     try {
       await requestSubscription(sku);
@@ -178,9 +184,10 @@ export default function PremiumScreen() {
   const displayPlans = IAP_ENABLED && products.length > 0 ? products : FALLBACK_PLANS;
 
   const onSelectPlan = (p: IapProduct) => {
-    // Live StoreKit product -> native purchase. Otherwise (web / Android) fall
-    // back to the Stripe checkout. iOS always has live products, so StoreKit.
-    if (IAP_ENABLED && p.raw) return buy(p.id);
+    // iOS ALWAYS uses StoreKit (Apple forbids external payment for digital
+    // goods). Each plan has its own SKU (monthly / yearly). Stripe is used
+    // only on Android / web where StoreKit does not exist.
+    if (Platform.OS === "ios") return buy(p.id);
     return subscribeStripe();
   };
 
