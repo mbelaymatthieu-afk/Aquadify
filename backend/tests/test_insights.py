@@ -5,7 +5,7 @@ import os
 import pytest
 import requests
 
-BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://fastapi-mobile-port.preview.emergentagent.com").rstrip("/")
+BASE_URL = os.environ.get("EXPO_BACKEND_URL", "https://aquadify-storekit.preview.emergentagent.com").rstrip("/")
 INSIGHTS_URL = f"{BASE_URL}/api/insights"
 
 # --- Realistic sample payload (mid-day, partial hydration, moderate activity) ---

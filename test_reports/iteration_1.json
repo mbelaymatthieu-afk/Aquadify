@@ -31,6 +31,6 @@
   "seed_data_creation": "None; used existing mobiletest123@aqua.com account. Added 1 glass (250ml) + 1 custom (175ml) log and deleted 1 entry during test — restored close to baseline.",
   "retest_needed": false,
   "should_main_agent_self_test": false,
-  "context_for_next_testing_agent": "Frontend talks to REMOTE backend https://drip-track-1.preview.emergentagent.com/api (set via EXPO_PUBLIC_AQUADIFY_API). Test account mobiletest123@aqua.com / Test1234! is onboarded with daily_goal_ml=2800. Use 390x844 mobile viewport. Google login + Stripe Premium subscribe MUST NOT be completed on web (Google redirects to auth.emergentagent.com; Stripe uses LIVE keys). Existing chat history has ~2 messages used out of 2 free — sending one more may flip into limit-reached upsell state; verify coach-upgrade-button testID then.",
+  "context_for_next_testing_agent": "Frontend talks to REMOTE backend https://aquadify-storekit.preview.emergentagent.com/api (set via EXPO_PUBLIC_AQUADIFY_API). Test account mobiletest123@aqua.com / Test1234! is onboarded with daily_goal_ml=2800. Use 390x844 mobile viewport. Google login + Stripe Premium subscribe MUST NOT be completed on web (Google redirects to auth.emergentagent.com; Stripe uses LIVE keys). Existing chat history has ~2 messages used out of 2 free — sending one more may flip into limit-reached upsell state; verify coach-upgrade-button testID then.",
   "rca_of_issue": "N/A — no defects reproduced."
 }

@@ -8,19 +8,17 @@
     "scheme": "aquadify",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.mtagency.aquadify",
       "buildNumber": "23",
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicités pertinentes dans la version gratuite.",
-        "NSHealthShareUsageDescription": "Aquadify utilise vos données d’activité Apple Santé afin de personnaliser votre objectif d’hydratation et vos recommandations.",
-        "NSHealthUpdateUsageDescription": "Aquadify peut enregistrer certaines informations liées à votre hydratation dans Apple Santé lorsque vous activez cette fonctionnalité.",
+        "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicit\u00e9s pertinentes dans la version gratuite.",
+        "NSHealthShareUsageDescription": "Aquadify utilise vos donn\u00e9es d\u2019activit\u00e9 Apple Sant\u00e9 afin de personnaliser votre objectif d\u2019hydratation et vos recommandations.",
+        "NSHealthUpdateUsageDescription": "Aquadify peut enregistrer certaines informations li\u00e9es \u00e0 votre hydratation dans Apple Sant\u00e9 lorsque vous activez cette fonctionnalit\u00e9.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -29,13 +27,11 @@
       "edgeToEdgeEnabled": true,
       "package": "com.mtagency.aquadify"
     },
-
     "web": {
       "bundler": "metro",
       "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
-
     "plugins": [
       "expo-router",
       "expo-notifications",
@@ -56,11 +52,9 @@
         }
       ]
     ],
-
     "experiments": {
       "typedRoutes": true
     },
-
     "extra": {
       "router": {},
       "eas": {

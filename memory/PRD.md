@@ -9,7 +9,7 @@ to build native iOS/Android apps. Reuse the EXISTING FastAPI + MongoDB backend a
 - Frontend: Expo SDK 54 + expo-router, talks to the REMOTE existing backend.
 - Backend: EXISTING drip-track1 FastAPI (remote, unmodifiable).
   Base URL in frontend/.env -> EXPO_PUBLIC_AQUADIFY_API
-  (https://drip-track-1.preview.emergentagent.com/api ; change to deployed URL in prod).
+  (https://aquadify-storekit.preview.emergentagent.com/api ; change to deployed URL in prod).
 - Local /app/backend is unused (kept default).
 
 ## Backend endpoints reused
