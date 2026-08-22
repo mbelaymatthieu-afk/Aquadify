@@ -5,7 +5,6 @@ import { Platform } from "react-native";
 
 import { api } from "@/src/api/client";
 import { signInWithApple } from "@/src/lib/apple";
-import { hasActive } from "@/src/lib/iap";
 import { storage } from "@/src/utils/storage";
 
 const TOKEN_KEY = "aquadify_token";
@@ -58,19 +57,12 @@ const AuthContext = createContext<AuthValue>({} as AuthValue);
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Merge the device's StoreKit entitlement into the user. On iOS, an active
-// subscription unlocks Premium even if the (remote) backend hasn't recorded it
-// yet — StoreKit current entitlements are the on-device source of truth and
-// work offline. Returns free if no active subscription (no stale caching).
-async function applyLocalPremium(u: AquaUser): Promise<AquaUser> {
-  if (u.is_premium) return u;
-  try {
-    if (await hasActive()) return { ...u, is_premium: true };
-  } catch {
-    // ignore — treat as free
-  }
-  return u;
-}
+// SECURITY: Premium is owned by the authenticated Aquadify ACCOUNT, never by the
+// device or its Apple ID. The backend (`is_premium` on the user object) is the
+// ONLY source of truth. We must NOT infer Premium from StoreKit device-level
+// entitlements (hasActiveSubscriptions), otherwise a second account signing in
+// on the same iPhone would inherit the first account's subscription.
+// => No local Premium is ever granted here. The user object is used as-is.
 
 function parseSessionId(url: string): string | null {
   try {
@@ -100,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const me = await api.get<AquaUser>("/auth/me", saved);
           setToken(saved);
-          setUser(await applyLocalPremium(me));
+          setUser(me);
         } catch {
           await storage.secureRemove(TOKEN_KEY);
         }
@@ -112,7 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const persist = async (data: { token: string; user: AquaUser }) => {
     await storage.secureSet(TOKEN_KEY, data.token);
     setToken(data.token);
-    setUser(await applyLocalPremium(data.user));
+    setUser(data.user);
   };
 
   const login = async (email: string, password: string) => {
@@ -210,7 +202,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = async () => {
     if (!token) return;
     const me = await api.get<AquaUser>("/auth/me", token);
-    setUser(await applyLocalPremium(me));
+    setUser(me);
   };
 
   return (

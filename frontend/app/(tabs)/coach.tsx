@@ -31,7 +31,6 @@ export default function CoachScreen() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [used, setUsed] = useState(0);
   const [limit, setLimit] = useState(2);
-  const [isPremium, setIsPremium] = useState(false);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -43,7 +42,6 @@ export default function CoachScreen() {
       setMessages(data.messages || []);
       setUsed(data.used || 0);
       setLimit(data.limit || 2);
-      setIsPremium(!!data.is_premium);
     } catch {
       // ignore
     } finally {
@@ -55,13 +53,18 @@ export default function CoachScreen() {
   useFocusEffect(
     useCallback(() => {
       load();
+      // Premium is derived from the authenticated account; refresh it from the
+      // backend every time the Coach tab gains focus so gating is never stale.
+      refreshUser();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [load]),
   );
 
-  // Premium is unlocked if the backend says so OR the device holds an active
-  // StoreKit subscription (merged into the auth user). Keeps Aquacoach unlimited
-  // right after an in-app purchase, even before the backend /iap/verify deploy.
-  const isPremiumEffective = isPremium || !!user?.is_premium;
+  // SECURITY: Aquacoach Premium gating depends EXCLUSIVELY on the backend-owned
+  // `user.is_premium` of the currently authenticated Aquadify account. We never
+  // rely on device-level StoreKit state, so a second account on the same iPhone
+  // can never inherit another account's subscription.
+  const isPremiumEffective = !!user?.is_premium;
   const limitReached = !isPremiumEffective && used >= limit;
 
   const send = async () => {
@@ -76,7 +79,6 @@ export default function CoachScreen() {
       setMessages((m) => [...m, { role: "assistant", text: res.reply }]);
       setUsed(res.used ?? used + 1);
       setLimit(res.limit ?? limit);
-      setIsPremium(!!res.is_premium);
       refreshUser();
     } catch (e: any) {
       setMessages((m) => [...m, { role: "assistant", text: e?.message || t("auth.errGeneric") }]);

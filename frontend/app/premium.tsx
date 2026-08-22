@@ -43,6 +43,7 @@ const FALLBACK_PLANS: IapProduct[] = [
     id: SKU_MONTHLY,
     title: "Mensuel",
     displayPrice: "4,99 €",
+    // App Store Connect: the MONTHLY plan has a 7-day free trial.
     hasFreeTrial: true,
     raw: null,
   },
@@ -50,7 +51,9 @@ const FALLBACK_PLANS: IapProduct[] = [
     id: SKU_YEARLY,
     title: "Annuel",
     displayPrice: "59,99 €",
-    hasFreeTrial: true,
+    // App Store Connect: the YEARLY plan has NO free trial. Never simulate
+    // trial eligibility locally — StoreKit remains the source of truth.
+    hasFreeTrial: false,
     raw: null,
   },
 ];
@@ -70,23 +73,17 @@ export default function PremiumScreen() {
 
   const handledRef = useRef(false);
 
+  // Premium is unlocked ONLY by the backend after it verifies the StoreKit
+  // transaction (JWS) and binds it to the currently authenticated account.
+  // If verification fails, we throw and NEVER grant Premium locally — the
+  // backend is the sole source of truth.
   const unlockPremium = async (payload: {
     product_id: string;
     transaction_id?: string;
     jws?: string;
   }) => {
-    try {
-      const updated = await verifyIapPurchase(payload, token);
-      setUser(updated);
-    } catch {
-      if (user) {
-        setUser({
-          ...user,
-          is_premium: true,
-        });
-      }
-    }
-
+    const updated = await verifyIapPurchase(payload, token);
+    setUser(updated);
     setShowSuccess(true);
   };
 
@@ -139,16 +136,24 @@ export default function PremiumScreen() {
           purchase?.purchaseToken ??
           purchase?.jwsRepresentationIOS;
 
-        await unlockPremium({
-          product_id: productId,
-          transaction_id: transactionId,
-          jws,
-        });
+        try {
+          // Backend verifies the JWS and binds the subscription to THIS account.
+          await unlockPremium({
+            product_id: productId,
+            transaction_id: transactionId,
+            jws,
+          });
 
-        await finishPurchase(purchase);
-
-        setBusy(false);
-        handledRef.current = false;
+          // Only finish the transaction once the backend confirmed ownership.
+          await finishPurchase(purchase);
+        } catch {
+          // Backend not deployed yet / verification failed / not the owner:
+          // never grant Premium locally. Fail safely with a clear message.
+          toast.show(t("premium.verifyFailed"), "error");
+        } finally {
+          setBusy(false);
+          handledRef.current = false;
+        }
       },
 
       (err: any) => {
@@ -199,22 +204,33 @@ export default function PremiumScreen() {
     setBusy(true);
 
     try {
-      const ok = await restoreAndCheck();
+      // Trigger the native StoreKit restore. Restored transactions are emitted
+      // through the purchase listener above, which forwards each JWS to the
+      // backend (/iap/verify) with the current account's Bearer token so the
+      // backend can validate the transaction and check ownership.
+      // NOTE: restoreAndCheck() returns a DEVICE-LEVEL boolean — it is
+      // intentionally IGNORED here and never used to grant Premium.
+      await restoreAndCheck();
 
-      if (ok) {
-        await unlockPremium({
-          product_id: "restore",
-        });
+      // Let the listener-driven backend verification settle, then trust ONLY
+      // the backend's account-level answer.
+      await new Promise((r) => setTimeout(r, 1500));
 
-        toast.show(
-          t("premium.restoreDone"),
-          "success"
-        );
+      let confirmed = false;
+      try {
+        const me = await api.get<typeof user>("/auth/me", token);
+        if (me) setUser(me as any);
+        confirmed = !!me?.is_premium;
+      } catch {
+        confirmed = false;
+      }
+
+      if (confirmed) {
+        setShowSuccess(true);
+        toast.show(t("premium.restoreDone"), "success");
       } else {
-        toast.show(
-          t("premium.restoreNone"),
-          "info"
-        );
+        // Secure failure: never unlock Premium locally.
+        toast.show(t("premium.restoreUnavailable"), "info");
       }
     } finally {
       setBusy(false);
