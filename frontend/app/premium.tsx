@@ -49,7 +49,7 @@ const FALLBACK_PLANS: IapProduct[] = [
   {
     id: SKU_YEARLY,
     title: "Annuel",
-    displayPrice: "49,99 €",
+    displayPrice: "59,99 €",
     hasFreeTrial: true,
     raw: null,
   },
@@ -67,12 +67,6 @@ export default function PremiumScreen() {
 
   const [products, setProducts] = useState<IapProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(IAP_ENABLED);
-
-  const [iapDebug, setIapDebug] = useState(
-    IAP_ENABLED
-      ? "StoreKit : initialisation..."
-      : "StoreKit désactivé sur cet appareil"
-  );
 
   const handledRef = useRef(false);
 
@@ -102,19 +96,14 @@ export default function PremiumScreen() {
     let mounted = true;
 
     (async () => {
-      setIapDebug("StoreKit : connexion...");
-
       const connected = await initIap();
 
       if (!mounted) return;
 
       if (!connected) {
-        setIapDebug("ERREUR : connexion StoreKit impossible");
         setLoadingProducts(false);
         return;
       }
-
-      setIapDebug("StoreKit connecté. Chargement des produits...");
 
       try {
         const subs = await getSubscriptions();
@@ -123,31 +112,10 @@ export default function PremiumScreen() {
 
         setProducts(subs);
         setLoadingProducts(false);
-
-        if (subs.length === 0) {
-          setIapDebug(
-            "ERREUR : 0 produit retourné par Apple\n" +
-              `Demandés : ${SKU_MONTHLY} | ${SKU_YEARLY}`
-          );
-        } else {
-          setIapDebug(
-            `OK : ${subs.length} produit(s) chargé(s)\n` +
-              subs
-                .map((p: IapProduct) => p.id)
-                .join("\n")
-          );
-        }
-      } catch (e: any) {
+      } catch {
         if (!mounted) return;
 
         setLoadingProducts(false);
-
-        setIapDebug(
-          "ERREUR fetchProducts : " +
-            (e?.code || "") +
-            " " +
-            (e?.message || String(e))
-        );
       }
     })();
 
@@ -171,10 +139,6 @@ export default function PremiumScreen() {
           purchase?.purchaseToken ??
           purchase?.jwsRepresentationIOS;
 
-        setIapDebug(
-          `ACHAT REÇU : ${productId || "productId inconnu"}`
-        );
-
         await unlockPremium({
           product_id: productId,
           transaction_id: transactionId,
@@ -190,13 +154,9 @@ export default function PremiumScreen() {
       (err: any) => {
         setBusy(false);
 
-        const code = err?.code || "sans code";
+        const code = err?.code || "";
         const message =
-          err?.message || "Erreur StoreKit inconnue";
-
-        setIapDebug(
-          `ERREUR ACHAT : ${code}\n${message}`
-        );
+          err?.message || t("premium.failed");
 
         if (
           code !== "E_USER_CANCELLED" &&
@@ -222,35 +182,26 @@ export default function PremiumScreen() {
     }
 
     setBusy(true);
-    setIapDebug(`Tentative d'achat :\n${sku}`);
 
     try {
       await requestSubscription(sku);
     } catch (e: any) {
       setBusy(false);
 
-      const code = e?.code || "sans code";
-      const message =
-        e?.message || "Erreur requestPurchase inconnue";
-
-      setIapDebug(
-        `ERREUR requestPurchase : ${code}\n${message}\nSKU : ${sku}`
+      toast.show(
+        e?.message || t("premium.failed"),
+        "error"
       );
-
-      toast.show(message, "error");
     }
   };
 
   const restore = async () => {
     setBusy(true);
-    setIapDebug("Restauration des achats...");
 
     try {
       const ok = await restoreAndCheck();
 
       if (ok) {
-        setIapDebug("Restauration : abonnement actif trouvé");
-
         await unlockPremium({
           product_id: "restore",
         });
@@ -260,19 +211,11 @@ export default function PremiumScreen() {
           "success"
         );
       } else {
-        setIapDebug(
-          "Restauration : aucun abonnement actif"
-        );
-
         toast.show(
           t("premium.restoreNone"),
           "info"
         );
       }
-    } catch (e: any) {
-      setIapDebug(
-        `ERREUR restauration : ${e?.message || String(e)}`
-      );
     } finally {
       setBusy(false);
     }
@@ -407,16 +350,6 @@ export default function PremiumScreen() {
 
           <Text style={styles.subtitle}>
             {t("premium.subtitle")}
-          </Text>
-        </View>
-
-        <View style={styles.debugBox}>
-          <Text style={styles.debugTitle}>
-            DEBUG STOREKIT
-          </Text>
-
-          <Text style={styles.debugText}>
-            {iapDebug}
           </Text>
         </View>
 
@@ -643,28 +576,6 @@ const styles = StyleSheet.create({
     color: "rgba(255,255,255,0.9)",
     fontSize: font.small,
     marginTop: spacing.xs,
-    textAlign: "center",
-  },
-
-  debugBox: {
-    backgroundColor: "rgba(0,0,0,0.65)",
-    borderRadius: radius.md,
-    padding: spacing.md,
-    marginBottom: spacing.md,
-  },
-
-  debugTitle: {
-    color: "#FFFFFF",
-    fontWeight: "800",
-    fontSize: 12,
-    marginBottom: 6,
-    textAlign: "center",
-  },
-
-  debugText: {
-    color: "#FFFFFF",
-    fontSize: 11,
-    lineHeight: 16,
     textAlign: "center",
   },
 
