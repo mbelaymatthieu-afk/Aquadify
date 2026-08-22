@@ -35,45 +35,198 @@ async def delete_account(current_user = Depends(get_current_user)):
 
 ---
 
-## 2) POST /api/iap/verify — Vérification d'achat Apple StoreKit 2
+## 2) IAP StoreKit 2 — Premium lié au COMPTE (verify + restore + webhook)
 
-Vérifie une transaction StoreKit et active `is_premium`.
+Objectif : `is_premium` appartient au **compte Aquadify authentifié**, jamais à
+l'appareil/Apple ID. Le backend vérifie réellement le **JWS signé** StoreKit 2,
+lie l'abonnement à **un seul** compte (unicité `original_transaction_id`), et
+**dérive** `is_premium` d'un abonnement actif non expiré (jamais permanent :
+retiré si expiré / révoqué / remboursé / fin de période).
 
-Body: `{ "product_id": str, "transaction_id": str, "jws": str }`
+### Prérequis
+- `pip install app-store-server-library pyjwt cryptography`
+- Variables d'env sur drip-track1 :
+  - `APPLE_BUNDLE_ID=com.mtagency.aquadify`
+  - `APPLE_ENV=Production` (mettre `Sandbox` pour les tests TestFlight)
+  - `APPLE_ROOT_CERTS=/chemin/AppleRootCA-G3.cer` (un ou plusieurs, séparés par `,`)
 
+### Migration BDD (MongoDB) — collection dédiée `subscriptions`
+```javascript
+db.createCollection("subscriptions");
+
+// UNICITÉ : un abonnement Apple (original_transaction_id) = UN SEUL compte.
+db.subscriptions.createIndex(
+  { original_transaction_id: 1 },
+  { unique: true, name: "uniq_original_tx" }
+);
+
+db.subscriptions.createIndex({ user_id: 1 });
+db.subscriptions.createIndex({ status: 1, expires_at: 1 });
+```
+Schéma d'un document `subscriptions` :
+```
+{ id, user_id, platform:"ios", product_id, original_transaction_id (UNIQUE),
+  transaction_id, status:"active|expired|revoked|refunded",
+  expires_at, last_verified_at, created_at, updated_at }
+```
+`users.is_premium` devient un champ **dérivé** (recalculé), plus une source autonome.
+
+### Code partagé (helpers)
 ```python
+import os
+from datetime import datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from appstoreserverlibrary.signed_data_verifier import SignedDataVerifier, VerificationException
+from appstoreserverlibrary.models.Environment import Environment
 
+VALID_PRODUCTS = {
+    "com.mtagency.aquadify.premium.monthly",
+    "com.mtagency.aquadify.premium.yearly",
+}
+BUNDLE_ID = os.environ["APPLE_BUNDLE_ID"]
+APP_ENV = (Environment.PRODUCTION
+           if os.environ.get("APPLE_ENV") == "Production"
+           else Environment.SANDBOX)
+
+# Apple Root CAs (DER). Requis pour valider la chaîne x5c du JWS signé.
+_root_certs = [open(p, "rb").read()
+               for p in os.environ.get("APPLE_ROOT_CERTS", "").split(",") if p]
+_verifier = SignedDataVerifier(_root_certs, enable_online_checks=True,
+                               environment=APP_ENV, bundle_id=BUNDLE_ID,
+                               app_apple_id=None)
+
+def _status_from_tx(tx) -> tuple[str, datetime | None]:
+    """Statut dérivé du payload de transaction décodé + signé."""
+    now = datetime.now(timezone.utc)
+    expires = (datetime.fromtimestamp(tx.expiresDate / 1000, tz=timezone.utc)
+               if tx.expiresDate else None)
+    if getattr(tx, "revocationDate", None):     # remboursé / révoqué par Apple
+        return "revoked", expires
+    if expires and expires < now:
+        return "expired", expires
+    return "active", expires
+
+async def _recompute_is_premium(uid: str) -> bool:
+    """is_premium = au moins UN abonnement actif non expiré. Jamais permanent."""
+    now = datetime.now(timezone.utc)
+    active = await db.subscriptions.find_one({
+        "user_id": uid, "status": "active",
+        "$or": [{"expires_at": None}, {"expires_at": {"$gt": now}}],
+    })
+    is_premium = bool(active)
+    await db.users.update_one({"id": uid}, {"$set": {"is_premium": is_premium}})
+    return is_premium
+
+async def _upsert_subscription(uid: str, tx) -> None:
+    """Lie/actualise l'abonnement pour CE compte, avec protection d'unicité."""
+    original = tx.originalTransactionId
+    existing = await db.subscriptions.find_one({"original_transaction_id": original})
+    if existing and existing["user_id"] != uid:
+        # PROTECTION : abonnement déjà rattaché à un autre compte Aquadify.
+        raise HTTPException(409, "Cet abonnement est déjà lié à un autre compte.")
+    status, expires = _status_from_tx(tx)
+    now = datetime.now(timezone.utc)
+    await db.subscriptions.update_one(
+        {"original_transaction_id": original},
+        {"$set": {
+            "user_id": uid, "platform": "ios", "product_id": tx.productId,
+            "original_transaction_id": original, "transaction_id": tx.transactionId,
+            "status": status, "expires_at": expires,
+            "last_verified_at": now, "updated_at": now,
+        }, "$setOnInsert": {"created_at": now}},
+        upsert=True,
+    )
+    await _recompute_is_premium(uid)
+
+def _decode_tx(jws: str):
+    """Vérifie la signature + chaîne Apple, puis rejette produit/bundle inconnus."""
+    if not jws:
+        raise HTTPException(400, "JWS manquant.")
+    try:
+        tx = _verifier.verify_and_decode_signed_transaction(jws)
+    except VerificationException:
+        raise HTTPException(401, "Transaction Apple invalide.")
+    if tx.bundleId != BUNDLE_ID or tx.productId not in VALID_PRODUCTS:
+        raise HTTPException(400, "Produit/bundle inconnu.")
+    return tx
+```
+
+### 2a) POST /api/iap/verify — Validation d'un achat
+Body : `{ "product_id": str?, "transaction_id": str?, "jws": str }`
+```python
 class IapVerifyRequest(BaseModel):
-    product_id: str
+    product_id: str | None = None
     transaction_id: str | None = None
     jws: str | None = None
 
 @api_router.post("/iap/verify")
 async def iap_verify(req: IapVerifyRequest, current_user = Depends(get_current_user)):
-    # TODO (recommandé en prod): vérifier le JWS signé auprès de l'App Store
-    # Server API (https://developer.apple.com/documentation/appstoreserverapi).
-    # Pour un MVP, on fait confiance au client puis on dédoublonne par transaction_id.
-    valid_products = [
-        "com.mtagency.aquadify.premium.monthly",
-        "com.mtagency.aquadify.premium.yearly",
-    ]
-    if req.product_id not in valid_products:
-        raise HTTPException(status_code=400, detail="Produit inconnu")
+    tx = _decode_tx(req.jws)
+    await _upsert_subscription(current_user["id"], tx)   # lie + recalcule is_premium
+    user = await db.users.find_one({"id": current_user["id"]})
+    return serialize_user(user)                          # même format que /auth/me
+```
 
+### 2b) POST /api/iap/restore — Restauration sécurisée (endpoint dédié)
+L'app envoie le/les JWS restauré(s). Le backend valide, récupère
+`originalTransactionId`, vérifie l'appartenance et ne confirme Premium que si le
+compte courant est bien le propriétaire. Sinon → **pas de Premium** (403/409).
+Body : `{ "jws": str }` **ou** `{ "jws_list": [str, ...] }`
+```python
+class IapRestoreRequest(BaseModel):
+    jws: str | None = None
+    jws_list: list[str] | None = None
+
+@api_router.post("/iap/restore")
+async def iap_restore(req: IapRestoreRequest, current_user = Depends(get_current_user)):
     uid = current_user["id"]
-    await db.users.update_one(
-        {"id": uid},
-        {"$set": {
-            "is_premium": True,
-            "premium_product_id": req.product_id,
-            "premium_transaction_id": req.transaction_id,
-        }},
-    )
+    tokens = req.jws_list or ([req.jws] if req.jws else [])
+    if not tokens:
+        raise HTTPException(400, "Aucune transaction à restaurer.")
+
+    restored_any = False
+    for jws in tokens:
+        tx = _decode_tx(jws)
+        original = tx.originalTransactionId
+        existing = await db.subscriptions.find_one({"original_transaction_id": original})
+        if existing and existing["user_id"] != uid:
+            # Abonnement d'un AUTRE compte : ne jamais partager Premium.
+            continue
+        await _upsert_subscription(uid, tx)
+        restored_any = True
+
+    is_premium = await _recompute_is_premium(uid)
+    if not (restored_any and is_premium):
+        # Échec sécurisé : rien restauré pour CE compte, ou abo inactif/expiré.
+        raise HTTPException(404, "Aucun abonnement actif à restaurer pour ce compte.")
     user = await db.users.find_one({"id": uid})
-    # Retournez l'utilisateur au même format que /auth/me
     return serialize_user(user)
 ```
+
+### 2c) POST /api/iap/apple-notifications — App Store Server Notifications V2
+Indispensable pour **retirer** Premium à l'expiration / annulation / remboursement
+/ révocation, **sans dépendre du client**. À déclarer dans App Store Connect.
+```python
+@api_router.post("/iap/apple-notifications")
+async def apple_notifications(payload: dict):
+    try:
+        notif = _verifier.verify_and_decode_notification(payload["signedPayload"])
+        tx = _verifier.verify_and_decode_signed_transaction(
+            notif.data.signedTransactionInfo)
+    except (VerificationException, KeyError, AttributeError):
+        raise HTTPException(401, "Notification invalide.")
+    sub = await db.subscriptions.find_one(
+        {"original_transaction_id": tx.originalTransactionId})
+    if sub:
+        # EXPIRED / DID_FAIL_TO_RENEW / REFUND / REVOKE / DID_CHANGE_RENEWAL_STATUS…
+        await _upsert_subscription(sub["user_id"], tx)   # recalcule status + is_premium
+    return {"ok": True}
+```
+
+> ⚠️ `serialize_user` doit renvoyer `is_premium` tel que stocké (dérivé). Tant que
+> ces endpoints ne sont pas déployés, l'app échoue **de façon sécurisée** (aucun
+> Premium local accordé) et affiche un message clair.
 
 ---
 
