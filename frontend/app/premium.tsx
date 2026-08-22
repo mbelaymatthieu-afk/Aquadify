@@ -3,7 +3,16 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Mascot } from "@/src/components/Mascot";
@@ -29,12 +38,21 @@ import {
 
 const ORIGIN = "https://drip-track-1.emergent.host";
 
-// Shown when StoreKit isn't available (web / Android / Expo Go) so the
-// subscription offer is always visible — e.g. for App Store / Play Store
-// review screenshots. On a real iOS build, live StoreKit prices replace these.
 const FALLBACK_PLANS: IapProduct[] = [
-  { id: SKU_MONTHLY, title: "Mensuel", displayPrice: "4,99 €", hasFreeTrial: true, raw: null },
-  { id: SKU_YEARLY, title: "Annuel", displayPrice: "49,99 €", hasFreeTrial: true, raw: null },
+  {
+    id: SKU_MONTHLY,
+    title: "Mensuel",
+    displayPrice: "4,99 €",
+    hasFreeTrial: true,
+    raw: null,
+  },
+  {
+    id: SKU_YEARLY,
+    title: "Annuel",
+    displayPrice: "49,99 €",
+    hasFreeTrial: true,
+    raw: null,
+  },
 ];
 
 export default function PremiumScreen() {
@@ -43,12 +61,19 @@ export default function PremiumScreen() {
   const { t } = useI18n();
   const { token, user, setUser, refreshUser } = useAuth();
   const toast = useToast();
+
   const [busy, setBusy] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // --- StoreKit (iOS) ---
   const [products, setProducts] = useState<IapProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(IAP_ENABLED);
+
+  const [iapDebug, setIapDebug] = useState(
+    IAP_ENABLED
+      ? "StoreKit : initialisation..."
+      : "StoreKit désactivé sur cet appareil"
+  );
+
   const handledRef = useRef(false);
 
   const unlockPremium = async (payload: {
@@ -60,90 +85,211 @@ export default function PremiumScreen() {
       const updated = await verifyIapPurchase(payload, token);
       setUser(updated);
     } catch {
-      // Backend /iap/verify not deployed yet — unlock optimistically so the
-      // user isn't blocked. Source of truth becomes the backend once deployed.
-      if (user) setUser({ ...user, is_premium: true });
+      if (user) {
+        setUser({
+          ...user,
+          is_premium: true,
+        });
+      }
     }
+
     setShowSuccess(true);
   };
 
   useEffect(() => {
     if (!IAP_ENABLED) return;
+
     let mounted = true;
+
     (async () => {
-      await initIap();
-      const subs = await getSubscriptions();
-      if (mounted) {
+      setIapDebug("StoreKit : connexion...");
+
+      const connected = await initIap();
+
+      if (!mounted) return;
+
+      if (!connected) {
+        setIapDebug("ERREUR : connexion StoreKit impossible");
+        setLoadingProducts(false);
+        return;
+      }
+
+      setIapDebug("StoreKit connecté. Chargement des produits...");
+
+      try {
+        const subs = await getSubscriptions();
+
+        if (!mounted) return;
+
         setProducts(subs);
         setLoadingProducts(false);
+
+        if (subs.length === 0) {
+          setIapDebug(
+            "ERREUR : 0 produit retourné par Apple\n" +
+              `Demandés : ${SKU_MONTHLY} | ${SKU_YEARLY}`
+          );
+        } else {
+          setIapDebug(
+            `OK : ${subs.length} produit(s) chargé(s)\n` +
+              subs
+                .map((p: IapProduct) => p.id)
+                .join("\n")
+          );
+        }
+      } catch (e: any) {
+        if (!mounted) return;
+
+        setLoadingProducts(false);
+
+        setIapDebug(
+          "ERREUR fetchProducts : " +
+            (e?.code || "") +
+            " " +
+            (e?.message || String(e))
+        );
       }
     })();
 
     const unsub = addPurchaseListeners(
       async (purchase: any) => {
         if (handledRef.current) return;
+
         handledRef.current = true;
-        const productId = purchase?.productId ?? purchase?.id ?? purchase?.ids?.[0] ?? "";
-        const transactionId = purchase?.transactionId ?? purchase?.id;
-        const jws = purchase?.purchaseToken ?? purchase?.jwsRepresentationIOS;
-        await unlockPremium({ product_id: productId, transaction_id: transactionId, jws });
+
+        const productId =
+          purchase?.productId ??
+          purchase?.id ??
+          purchase?.ids?.[0] ??
+          "";
+
+        const transactionId =
+          purchase?.transactionId ??
+          purchase?.id;
+
+        const jws =
+          purchase?.purchaseToken ??
+          purchase?.jwsRepresentationIOS;
+
+        setIapDebug(
+          `ACHAT REÇU : ${productId || "productId inconnu"}`
+        );
+
+        await unlockPremium({
+          product_id: productId,
+          transaction_id: transactionId,
+          jws,
+        });
+
         await finishPurchase(purchase);
+
         setBusy(false);
         handledRef.current = false;
       },
+
       (err: any) => {
         setBusy(false);
-        const code = err?.code || "";
-        if (code !== "E_USER_CANCELLED" && code !== "user_cancelled") {
-          toast.show(err?.message || t("premium.failed"), "error");
+
+        const code = err?.code || "sans code";
+        const message =
+          err?.message || "Erreur StoreKit inconnue";
+
+        setIapDebug(
+          `ERREUR ACHAT : ${code}\n${message}`
+        );
+
+        if (
+          code !== "E_USER_CANCELLED" &&
+          code !== "user_cancelled"
+        ) {
+          toast.show(message, "error");
         }
-      },
+      }
     );
 
     return () => {
       mounted = false;
       unsub();
     };
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const buy = async (sku: string) => {
-    // App Store rule: iOS must use StoreKit only. StoreKit is unavailable in
-    // Expo Go / web — the user must install a real build (TestFlight/App Store).
     if (!IAP_ENABLED) {
       toast.show(t("premium.iapNeedsBuild"), "info");
       return;
     }
+
     setBusy(true);
+    setIapDebug(`Tentative d'achat :\n${sku}`);
+
     try {
       await requestSubscription(sku);
     } catch (e: any) {
       setBusy(false);
-      toast.show(e?.message || t("premium.failed"), "error");
+
+      const code = e?.code || "sans code";
+      const message =
+        e?.message || "Erreur requestPurchase inconnue";
+
+      setIapDebug(
+        `ERREUR requestPurchase : ${code}\n${message}\nSKU : ${sku}`
+      );
+
+      toast.show(message, "error");
     }
   };
 
   const restore = async () => {
     setBusy(true);
+    setIapDebug("Restauration des achats...");
+
     try {
       const ok = await restoreAndCheck();
+
       if (ok) {
-        await unlockPremium({ product_id: "restore" });
-        toast.show(t("premium.restoreDone"), "success");
+        setIapDebug("Restauration : abonnement actif trouvé");
+
+        await unlockPremium({
+          product_id: "restore",
+        });
+
+        toast.show(
+          t("premium.restoreDone"),
+          "success"
+        );
       } else {
-        toast.show(t("premium.restoreNone"), "info");
+        setIapDebug(
+          "Restauration : aucun abonnement actif"
+        );
+
+        toast.show(
+          t("premium.restoreNone"),
+          "info"
+        );
       }
+    } catch (e: any) {
+      setIapDebug(
+        `ERREUR restauration : ${e?.message || String(e)}`
+      );
     } finally {
       setBusy(false);
     }
   };
 
-  // --- Stripe fallback (web / Android) ---
   const pollStatus = async (sessionId: string) => {
     for (let i = 0; i < 6; i++) {
       try {
-        const s = await api.get(`/payments/checkout/status/${sessionId}`, token);
-        if (s.payment_status === "paid" || s.status === "complete") {
+        const s = await api.get(
+          `/payments/checkout/status/${sessionId}`,
+          token
+        );
+
+        if (
+          s.payment_status === "paid" ||
+          s.status === "complete"
+        ) {
           await refreshUser();
           setShowSuccess(true);
           return;
@@ -151,172 +297,408 @@ export default function PremiumScreen() {
       } catch {
         // ignore
       }
-      await new Promise((r) => setTimeout(r, 2000));
+
+      await new Promise((r) =>
+        setTimeout(r, 2000)
+      );
     }
+
     toast.show(t("premium.failed"), "info");
   };
 
   const subscribeStripe = async () => {
     setBusy(true);
+
     try {
-      const res = await api.post("/payments/checkout/session", { kind: "premium", origin_url: ORIGIN }, token);
+      const res = await api.post(
+        "/payments/checkout/session",
+        {
+          kind: "premium",
+          origin_url: ORIGIN,
+        },
+        token
+      );
+
       if (res.url) {
         await WebBrowser.openBrowserAsync(res.url);
         await pollStatus(res.session_id);
       }
     } catch (e: any) {
-      toast.show(e?.message || t("auth.errGeneric"), "error");
+      toast.show(
+        e?.message || t("auth.errGeneric"),
+        "error"
+      );
     } finally {
       setBusy(false);
     }
   };
 
   const features = [
-    { icon: "infinite", text: t("premium.f1") },
-    { icon: "stats-chart", text: t("premium.f2") },
-    { icon: "trophy", text: t("premium.f3") },
-    { icon: "heart", text: t("premium.f4") },
+    {
+      icon: "infinite",
+      text: t("premium.f1"),
+    },
+    {
+      icon: "stats-chart",
+      text: t("premium.f2"),
+    },
+    {
+      icon: "trophy",
+      text: t("premium.f3"),
+    },
+    {
+      icon: "heart",
+      text: t("premium.f4"),
+    },
   ];
 
-  const isYearly = (id: string) => id.toLowerCase().includes("year");
+  const isYearly = (id: string) =>
+    id.toLowerCase().includes("year");
 
-  // Real StoreKit products when available; otherwise the static offer preview.
-  const displayPlans = IAP_ENABLED && products.length > 0 ? products : FALLBACK_PLANS;
+  const displayPlans =
+    IAP_ENABLED && products.length > 0
+      ? products
+      : FALLBACK_PLANS;
 
   const onSelectPlan = (p: IapProduct) => {
-    // iOS ALWAYS uses StoreKit (Apple forbids external payment for digital
-    // goods). Each plan has its own SKU (monthly / yearly). Stripe is used
-    // only on Android / web where StoreKit does not exist.
-    if (Platform.OS === "ios") return buy(p.id);
+    if (Platform.OS === "ios") {
+      return buy(p.id);
+    }
+
     return subscribeStripe();
   };
 
   return (
-    <LinearGradient colors={[colors.gradTop, colors.gradBottom]} style={styles.flex}>
-      <ScrollView contentContainerStyle={[styles.scroll, { paddingTop: insets.top + spacing.md }]}>
-        <Pressable testID="premium-close" onPress={() => router.back()} style={styles.close} hitSlop={10}>
-          <Ionicons name="close" size={26} color={colors.white} />
+    <LinearGradient
+      colors={[
+        colors.gradTop,
+        colors.gradBottom,
+      ]}
+      style={styles.flex}
+    >
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingTop:
+              insets.top + spacing.md,
+          },
+        ]}
+      >
+        <Pressable
+          testID="premium-close"
+          onPress={() => router.back()}
+          style={styles.close}
+          hitSlop={10}
+        >
+          <Ionicons
+            name="close"
+            size={26}
+            color={colors.white}
+          />
         </Pressable>
 
         <View style={styles.brand}>
           <Mascot size={96} />
-          <Text style={styles.title}>{t("premium.title")}</Text>
-          <Text style={styles.subtitle}>{t("premium.subtitle")}</Text>
+
+          <Text style={styles.title}>
+            {t("premium.title")}
+          </Text>
+
+          <Text style={styles.subtitle}>
+            {t("premium.subtitle")}
+          </Text>
+        </View>
+
+        <View style={styles.debugBox}>
+          <Text style={styles.debugTitle}>
+            DEBUG STOREKIT
+          </Text>
+
+          <Text style={styles.debugText}>
+            {iapDebug}
+          </Text>
         </View>
 
         <View style={styles.card}>
           {features.map((f) => (
-            <View key={f.icon} style={styles.featureRow}>
-              <View style={styles.featureIcon}>
-                <Ionicons name={f.icon as any} size={20} color={colors.primary} />
+            <View
+              key={f.icon}
+              style={styles.featureRow}
+            >
+              <View
+                style={styles.featureIcon}
+              >
+                <Ionicons
+                  name={f.icon as any}
+                  size={20}
+                  color={colors.primary}
+                />
               </View>
-              <Text style={styles.featureText}>{f.text}</Text>
+
+              <Text style={styles.featureText}>
+                {f.text}
+              </Text>
             </View>
           ))}
 
-          <Text style={styles.planLabel}>{t("premium.choosePlan")}</Text>
-          {displayPlans.some((p) => p.hasFreeTrial) && (
-            <View style={styles.trialHero} testID="premium-trial-hero">
-              <Ionicons name="gift" size={20} color={colors.white} />
-              <Text style={styles.trialHeroText}>{t("premium.trialHero")}</Text>
+          <Text style={styles.planLabel}>
+            {t("premium.choosePlan")}
+          </Text>
+
+          {displayPlans.some(
+            (p) => p.hasFreeTrial
+          ) && (
+            <View
+              style={styles.trialHero}
+              testID="premium-trial-hero"
+            >
+              <Ionicons
+                name="gift"
+                size={20}
+                color={colors.white}
+              />
+
+              <Text style={styles.trialHeroText}>
+                {t("premium.trialHero")}
+              </Text>
             </View>
           )}
+
           {IAP_ENABLED && loadingProducts ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator color={colors.primary} />
-              <Text style={styles.loadingText}>{t("premium.loadingProducts")}</Text>
+              <ActivityIndicator
+                color={colors.primary}
+              />
+
+              <Text style={styles.loadingText}>
+                {t("premium.loadingProducts")}
+              </Text>
             </View>
           ) : (
             displayPlans.map((p) => (
               <Pressable
                 key={p.id}
-                testID={`premium-plan-${isYearly(p.id) ? "yearly" : "monthly"}`}
-                onPress={() => onSelectPlan(p)}
+                testID={`premium-plan-${
+                  isYearly(p.id)
+                    ? "yearly"
+                    : "monthly"
+                }`}
+                onPress={() =>
+                  onSelectPlan(p)
+                }
                 disabled={busy}
                 style={({ pressed }) => [
                   styles.planRow,
-                  isYearly(p.id) && styles.planRowBest,
-                  pressed && { opacity: 0.9 },
+                  isYearly(p.id) &&
+                    styles.planRowBest,
+                  pressed && {
+                    opacity: 0.9,
+                  },
                 ]}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={styles.planTitle}>
-                    {isYearly(p.id) ? t("premium.yearly") : t("premium.monthly")}
+                    {isYearly(p.id)
+                      ? t("premium.yearly")
+                      : t("premium.monthly")}
                   </Text>
+
                   <View style={styles.badgeRow}>
                     {isYearly(p.id) && (
                       <View style={styles.badge}>
-                        <Text style={styles.badgeText}>{t("premium.bestValue")}</Text>
+                        <Text style={styles.badgeText}>
+                          {t("premium.bestValue")}
+                        </Text>
                       </View>
                     )}
+
                     {p.hasFreeTrial && (
                       <View style={styles.trialBadge}>
-                        <Text style={styles.trialBadgeText}>{t("premium.trialBadge")}</Text>
+                        <Text style={styles.trialBadgeText}>
+                          {t("premium.trialBadge")}
+                        </Text>
                       </View>
                     )}
                   </View>
                 </View>
+
                 <View style={styles.planPriceCol}>
-                  <Text style={styles.planPrice}>{p.displayPrice}</Text>
+                  <Text style={styles.planPrice}>
+                    {p.displayPrice}
+                  </Text>
+
                   <Text style={styles.planPeriod}>
-                    {isYearly(p.id) ? t("premium.perYear") : t("premium.perMonth")}
+                    {isYearly(p.id)
+                      ? t("premium.perYear")
+                      : t("premium.perMonth")}
                   </Text>
                 </View>
               </Pressable>
             ))
           )}
 
-          {busy && <ActivityIndicator style={{ marginTop: spacing.md }} color={colors.primary} />}
-
-          {displayPlans.some((p) => p.hasFreeTrial) && (
-            <Text style={styles.trialNote}>{t("premium.trialNote")}</Text>
+          {busy && (
+            <ActivityIndicator
+              style={{
+                marginTop: spacing.md,
+              }}
+              color={colors.primary}
+            />
           )}
-          <Text style={styles.cancelNote}>{t("premium.cancelNote")}</Text>
+
+          {displayPlans.some(
+            (p) => p.hasFreeTrial
+          ) && (
+            <Text style={styles.trialNote}>
+              {t("premium.trialNote")}
+            </Text>
+          )}
+
+          <Text style={styles.cancelNote}>
+            {t("premium.cancelNote")}
+          </Text>
         </View>
 
         {IAP_ENABLED && user?.is_premium && (
           <Pressable
             testID="premium-manage"
             onPress={() =>
-              Linking.openURL("https://apps.apple.com/account/subscriptions").catch(() => {})
+              Linking.openURL(
+                "https://apps.apple.com/account/subscriptions"
+              ).catch(() => {})
             }
-            style={({ pressed }) => [styles.manageBtn, pressed && { opacity: 0.9 }]}
+            style={({ pressed }) => [
+              styles.manageBtn,
+              pressed && {
+                opacity: 0.9,
+              },
+            ]}
           >
-            <Ionicons name="settings-outline" size={18} color={colors.white} />
-            <Text style={styles.manageBtnText}>{t("premium.manage")}</Text>
+            <Ionicons
+              name="settings-outline"
+              size={18}
+              color={colors.white}
+            />
+
+            <Text style={styles.manageBtnText}>
+              {t("premium.manage")}
+            </Text>
           </Pressable>
         )}
 
         {IAP_ENABLED && (
-          <Pressable testID="premium-restore" onPress={restore} disabled={busy} style={styles.restoreBtnBottom}>
-            <Text style={styles.restoreTextBottom}>{t("premium.restore")}</Text>
+          <Pressable
+            testID="premium-restore"
+            onPress={restore}
+            disabled={busy}
+            style={styles.restoreBtnBottom}
+          >
+            <Text style={styles.restoreTextBottom}>
+              {t("premium.restore")}
+            </Text>
           </Pressable>
         )}
       </ScrollView>
 
-      {showSuccess && <PremiumSuccess message={t("premium.congrats")} onDone={() => router.back()} />}
+      {showSuccess && (
+        <PremiumSuccess
+          message={t("premium.congrats")}
+          onDone={() => router.back()}
+        />
+      )}
     </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  scroll: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xxl },
-  close: { alignSelf: "flex-end", padding: spacing.xs },
-  brand: { alignItems: "center", marginBottom: spacing.lg },
-  title: { color: colors.white, fontSize: font.h1, fontWeight: "800", marginTop: spacing.sm, textAlign: "center" },
-  subtitle: { color: "rgba(255,255,255,0.9)", fontSize: font.small, marginTop: spacing.xs, textAlign: "center" },
-  card: { backgroundColor: colors.card, borderRadius: radius.xl, padding: spacing.lg, ...shadow.card },
-  featureRow: { flexDirection: "row", alignItems: "center", gap: spacing.md, marginBottom: spacing.md },
+  flex: {
+    flex: 1,
+  },
+
+  scroll: {
+    paddingHorizontal: spacing.lg,
+    paddingBottom: spacing.xxl,
+  },
+
+  close: {
+    alignSelf: "flex-end",
+    padding: spacing.xs,
+  },
+
+  brand: {
+    alignItems: "center",
+    marginBottom: spacing.lg,
+  },
+
+  title: {
+    color: colors.white,
+    fontSize: font.h1,
+    fontWeight: "800",
+    marginTop: spacing.sm,
+    textAlign: "center",
+  },
+
+  subtitle: {
+    color: "rgba(255,255,255,0.9)",
+    fontSize: font.small,
+    marginTop: spacing.xs,
+    textAlign: "center",
+  },
+
+  debugBox: {
+    backgroundColor: "rgba(0,0,0,0.65)",
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+
+  debugTitle: {
+    color: "#FFFFFF",
+    fontWeight: "800",
+    fontSize: 12,
+    marginBottom: 6,
+    textAlign: "center",
+  },
+
+  debugText: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    lineHeight: 16,
+    textAlign: "center",
+  },
+
+  card: {
+    backgroundColor: colors.card,
+    borderRadius: radius.xl,
+    padding: spacing.lg,
+    ...shadow.card,
+  },
+
+  featureRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.md,
+    marginBottom: spacing.md,
+  },
+
   featureIcon: {
     width: 42,
     height: 42,
     borderRadius: radius.md,
-    backgroundColor: colors.primarySoft,
+    backgroundColor:
+      colors.primarySoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  featureText: { flex: 1, fontSize: font.body, fontWeight: "600", color: colors.text },
+
+  featureText: {
+    flex: 1,
+    fontSize: font.body,
+    fontWeight: "600",
+    color: colors.text,
+  },
+
   planLabel: {
     fontSize: font.tiny,
     fontWeight: "800",
@@ -326,13 +708,27 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
     marginBottom: spacing.sm,
   },
-  loadingBox: { flexDirection: "row", alignItems: "center", gap: spacing.sm, paddingVertical: spacing.md },
-  loadingText: { fontSize: font.small, color: colors.textMuted, paddingVertical: spacing.sm },
+
+  loadingBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+  },
+
+  loadingText: {
+    fontSize: font.small,
+    color: colors.textMuted,
+    paddingVertical: spacing.sm,
+  },
+
   planRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: colors.cardAlt,
+    justifyContent:
+      "space-between",
+    backgroundColor:
+      colors.cardAlt,
     borderRadius: radius.lg,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -340,33 +736,68 @@ const styles = StyleSheet.create({
     minHeight: 60,
     marginBottom: spacing.sm,
   },
-  planRowBest: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
-  planTitle: { fontSize: font.body, fontWeight: "800", color: colors.text },
+
+  planRowBest: {
+    borderColor: colors.primary,
+    backgroundColor:
+      colors.primarySoft,
+  },
+
+  planTitle: {
+    fontSize: font.body,
+    fontWeight: "800",
+    color: colors.text,
+  },
+
   badge: {
     alignSelf: "flex-start",
-    backgroundColor: colors.primary,
+    backgroundColor:
+      colors.primary,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal:
+      spacing.sm,
     paddingVertical: 2,
     marginTop: 4,
   },
-  badgeText: { color: colors.white, fontSize: 10, fontWeight: "800" },
-  badgeRow: { flexDirection: "row", flexWrap: "wrap", gap: 6, marginTop: 4 },
+
+  badgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
+  badgeRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 4,
+  },
+
   trialBadge: {
     alignSelf: "flex-start",
-    backgroundColor: colors.success,
+    backgroundColor:
+      colors.success,
     borderRadius: radius.pill,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal:
+      spacing.sm,
     paddingVertical: 2,
   },
-  trialBadgeText: { color: colors.white, fontSize: 10, fontWeight: "800" },
+
+  trialBadgeText: {
+    color: colors.white,
+    fontSize: 10,
+    fontWeight: "800",
+  },
+
   trialNote: {
     fontSize: font.tiny,
-    color: colors.textSecondary,
+    color:
+      colors.textSecondary,
     marginTop: spacing.md,
     lineHeight: 17,
     textAlign: "center",
   },
+
   cancelNote: {
     fontSize: font.tiny,
     color: colors.textMuted,
@@ -374,55 +805,78 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     textAlign: "center",
   },
-  planPrice: { fontSize: font.h3, fontWeight: "800", color: colors.primaryDark },
-  planPriceCol: { alignItems: "flex-end" },
-  planPeriod: { fontSize: font.tiny, color: colors.textMuted, fontWeight: "600" },
+
+  planPrice: {
+    fontSize: font.h3,
+    fontWeight: "800",
+    color: colors.primaryDark,
+  },
+
+  planPriceCol: {
+    alignItems: "flex-end",
+  },
+
+  planPeriod: {
+    fontSize: font.tiny,
+    color: colors.textMuted,
+    fontWeight: "600",
+  },
+
   restoreBtnBottom: {
     alignSelf: "center",
     marginTop: spacing.lg,
     paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal:
+      spacing.md,
   },
+
   restoreTextBottom: {
-    color: "rgba(255,255,255,0.75)",
+    color:
+      "rgba(255,255,255,0.75)",
     fontSize: font.tiny,
     fontWeight: "600",
-    textDecorationLine: "underline",
+    textDecorationLine:
+      "underline",
   },
-  cta: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: spacing.sm,
-    backgroundColor: colors.primary,
-    borderRadius: radius.pill,
-    minHeight: 56,
-    marginTop: spacing.md,
-    ...shadow.button,
-  },
-  ctaText: { color: colors.white, fontSize: font.body, fontWeight: "800" },
+
   manageBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: spacing.sm,
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor:
+      "rgba(255,255,255,0.18)",
     borderRadius: radius.pill,
     minHeight: 50,
     marginTop: spacing.lg,
     borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.35)",
+    borderColor:
+      "rgba(255,255,255,0.35)",
   },
-  manageBtnText: { color: colors.white, fontSize: font.small, fontWeight: "700" },
+
+  manageBtnText: {
+    color: colors.white,
+    fontSize: font.small,
+    fontWeight: "700",
+  },
+
   trialHero: {
     flexDirection: "row",
     alignItems: "center",
     gap: spacing.sm,
-    backgroundColor: colors.success,
+    backgroundColor:
+      colors.success,
     borderRadius: radius.md,
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
+    paddingHorizontal:
+      spacing.md,
     marginBottom: spacing.sm,
   },
-  trialHeroText: { flex: 1, color: colors.white, fontSize: font.small, fontWeight: "800" },
+
+  trialHeroText: {
+    flex: 1,
+    color: colors.white,
+    fontSize: font.small,
+    fontWeight: "800",
+  },
 });
