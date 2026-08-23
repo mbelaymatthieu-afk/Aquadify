@@ -86,7 +86,41 @@ export default function PremiumScreen() {
   }) => {
     const updated = await verifyIapPurchase(payload, token);
     setUser(updated);
+    // Re-sync from the backend (source of truth) after verification.
+    try {
+      await refreshUser();
+    } catch {
+      // non-fatal — setUser(updated) already reflects the verified state
+    }
     setShowSuccess(true);
+  };
+
+  // Extract StoreKit fields from a purchase and verify it against the backend.
+  // Shared by both the requestPurchase return value (primary) and the
+  // purchaseUpdatedListener (fallback). Throws if verification fails.
+  const processPurchase = async (purchase: any) => {
+    const productId =
+      purchase?.productId ??
+      purchase?.id ??
+      purchase?.ids?.[0] ??
+      "";
+
+    const transactionId =
+      purchase?.transactionId ??
+      purchase?.id;
+
+    const jws =
+      purchase?.purchaseToken ??
+      purchase?.jwsRepresentationIOS;
+
+    await unlockPremium({
+      product_id: productId,
+      transaction_id: transactionId,
+      jws,
+    });
+
+    // Only finish once the backend confirmed ownership.
+    await finishPurchase(purchase);
   };
 
   useEffect(() => {
@@ -120,41 +154,22 @@ export default function PremiumScreen() {
 
     const unsub = addPurchaseListeners(
       async (purchase: any) => {
+        // Fallback path. The primary path is buy() using requestPurchase's
+        // return value; this listener still catches replayed/deferred
+        // transactions (e.g. Ask-to-Buy, restores). handledRef de-dupes so a
+        // purchase is never verified twice.
         if (handledRef.current) return;
 
         handledRef.current = true;
 
-        const productId =
-          purchase?.productId ??
-          purchase?.id ??
-          purchase?.ids?.[0] ??
-          "";
-
-        const transactionId =
-          purchase?.transactionId ??
-          purchase?.id;
-
-        const jws =
-          purchase?.purchaseToken ??
-          purchase?.jwsRepresentationIOS;
-
         try {
-          // Backend verifies the JWS and binds the subscription to THIS account.
-          await unlockPremium({
-            product_id: productId,
-            transaction_id: transactionId,
-            jws,
-          });
-
-          // Only finish the transaction once the backend confirmed ownership.
-          await finishPurchase(purchase);
+          await processPurchase(purchase);
         } catch {
           // Backend not deployed yet / verification failed / not the owner:
           // never grant Premium locally. Fail safely with a clear message.
           toast.show(t("premium.verifyFailed"), "error");
         } finally {
           setBusy(false);
-          handledRef.current = false;
         }
       },
 
@@ -188,17 +203,40 @@ export default function PremiumScreen() {
       return;
     }
 
+    if (busy) return;
+
     setBusy(true);
+    handledRef.current = false;
 
     try {
-      await requestSubscription(sku);
-    } catch (e: any) {
-      setBusy(false);
+      // PRIMARY path: on iOS requestPurchase resolves with the completed
+      // transaction. We verify it directly here so we never depend on the
+      // purchaseUpdatedListener (which StoreKit de-duplicates and can suppress
+      // for replayed/unfinished transactions). setBusy(false) is guaranteed in
+      // the finally block, so the spinner can no longer get stuck.
+      const result = await requestSubscription(sku);
+      const purchase = Array.isArray(result) ? result[0] : result;
 
-      toast.show(
-        e?.message || t("premium.failed"),
-        "error"
-      );
+      if (purchase && !handledRef.current) {
+        handledRef.current = true;
+        await processPurchase(purchase);
+      }
+      // If no purchase was returned (deferred/Ask-to-Buy), the listener
+      // fallback above will handle it when the transaction arrives.
+    } catch (e: any) {
+      const code = e?.code || "";
+
+      if (
+        code !== "E_USER_CANCELLED" &&
+        code !== "user_cancelled"
+      ) {
+        toast.show(
+          e?.message || t("premium.verifyFailed"),
+          "error"
+        );
+      }
+    } finally {
+      setBusy(false);
     }
   };
 

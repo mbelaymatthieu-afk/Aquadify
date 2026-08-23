@@ -182,8 +182,8 @@ export function addPurchaseListeners(
 
 export async function requestSubscription(
   sku: string,
-): Promise<void> {
-  if (!IAP_ENABLED) return;
+): Promise<any> {
+  if (!IAP_ENABLED) return null;
 
   console.log(
     "[IAP] requestSubscription SKU:",
@@ -197,7 +197,11 @@ export async function requestSubscription(
   }
 
   try {
-    await iap().requestPurchase({
+    // On iOS StoreKit 2, requestPurchase resolves with the completed
+    // transaction. We RETURN it so the caller can verify it directly instead
+    // of relying only on purchaseUpdatedListener (which de-duplicates iOS
+    // transactions and can be suppressed for replayed/unfinished ones).
+    const result = await iap().requestPurchase({
       request: {
         apple: {
           sku,
@@ -205,6 +209,13 @@ export async function requestSubscription(
       },
       type: "subs",
     });
+
+    console.log(
+      "[IAP] requestPurchase resolved:",
+      JSON.stringify(result),
+    );
+
+    return result;
   } catch (e: any) {
     console.log(
       "[IAP] requestPurchase FAILED:",
