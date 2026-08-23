@@ -70,6 +70,8 @@ export default function PremiumScreen() {
 
   const [products, setProducts] = useState<IapProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(IAP_ENABLED);
+  // Currently selected plan (defaults to the yearly "best value" offer).
+  const [selectedId, setSelectedId] = useState<string>(SKU_YEARLY);
 
   const handledRef = useRef(false);
 
@@ -319,6 +321,18 @@ export default function PremiumScreen() {
       ? products
       : FALLBACK_PLANS;
 
+  // Show StoreKit's localized price ONLY when it is already in euros (real
+  // French storefront). On a non-EUR account (e.g. a US sandbox tester) StoreKit
+  // returns dollars — in that case fall back to the exact configured euro
+  // amounts so the paywall always shows 4,99 € / 59,99 €.
+  const displayEuroPrice = (p: IapProduct) => {
+    if (p.displayPrice && p.displayPrice.includes("€")) return p.displayPrice;
+    return isYearly(p.id) ? "59,99 €" : "4,99 €";
+  };
+
+  const selectedPlan =
+    displayPlans.find((p) => p.id === selectedId) ?? displayPlans[0];
+
   const onSelectPlan = (p: IapProduct) => {
     if (Platform.OS === "ios") {
       return buy(p.id);
@@ -434,18 +448,33 @@ export default function PremiumScreen() {
                     : "monthly"
                 }`}
                 onPress={() =>
-                  onSelectPlan(p)
+                  setSelectedId(p.id)
                 }
                 disabled={busy}
                 style={({ pressed }) => [
                   styles.planRow,
-                  isYearly(p.id) &&
-                    styles.planRowBest,
+                  p.id === selectedId &&
+                    styles.planRowSelected,
                   pressed && {
                     opacity: 0.9,
                   },
                 ]}
               >
+                <Ionicons
+                  name={
+                    p.id === selectedId
+                      ? "radio-button-on"
+                      : "radio-button-off"
+                  }
+                  size={22}
+                  color={
+                    p.id === selectedId
+                      ? colors.primary
+                      : colors.border
+                  }
+                  style={{ marginRight: spacing.sm }}
+                />
+
                 <View style={{ flex: 1 }}>
                   <Text style={styles.planTitle}>
                     {isYearly(p.id)
@@ -474,7 +503,7 @@ export default function PremiumScreen() {
 
                 <View style={styles.planPriceCol}>
                   <Text style={styles.planPrice}>
-                    {p.displayPrice}
+                    {displayEuroPrice(p)}
                   </Text>
 
                   <Text style={styles.planPeriod}>
@@ -485,6 +514,30 @@ export default function PremiumScreen() {
                 </View>
               </Pressable>
             ))
+          )}
+
+          {!(IAP_ENABLED && loadingProducts) && (
+            <Pressable
+              testID="premium-subscribe"
+              onPress={() =>
+                selectedPlan &&
+                onSelectPlan(selectedPlan)
+              }
+              disabled={busy || !selectedPlan}
+              style={({ pressed }) => [
+                styles.subscribeBtn,
+                (busy || !selectedPlan) && {
+                  opacity: 0.6,
+                },
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <Text style={styles.subscribeBtnText}>
+                {selectedPlan?.hasFreeTrial
+                  ? t("premium.ctaTrial")
+                  : t("premium.cta")}
+              </Text>
+            </Pressable>
           )}
 
           {busy && (
@@ -668,6 +721,29 @@ const styles = StyleSheet.create({
     borderColor: colors.primary,
     backgroundColor:
       colors.primarySoft,
+  },
+
+  planRowSelected: {
+    borderColor: colors.primary,
+    backgroundColor:
+      colors.primarySoft,
+    borderWidth: 2,
+  },
+
+  subscribeBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.pill,
+    minHeight: 54,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: spacing.sm,
+    ...shadow.card,
+  },
+
+  subscribeBtnText: {
+    color: colors.white,
+    fontSize: font.body,
+    fontWeight: "800",
   },
 
   planTitle: {

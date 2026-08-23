@@ -148,16 +148,32 @@
 ##         -working: "NA"
 ##         -agent: "main"
 ##         -comment: "Wrapped app in ErrorBoundary; ATT requested before AdMob init (native no-op on web). Verify app boots normally."
+##   - task: "Premium paywall: euro pricing + plan selection (premium.tsx)"
+##     implemented: true
+##     working: true
+##     file: "app/premium.tsx"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "User reported: paywall showed prices in USD ($3.99/$49.99) and tapping a plan did not move the selection cursor. FIX: (1) displayEuroPrice() shows StoreKit displayPrice only if it already contains EUR, otherwise forces the exact euro amounts (Monthly 4,99 € / Yearly 59,99 €). (2) Added selectedId state (default yearly SKU) with a radio indicator + blue border on the selected card; tapping a plan now only SELECTS it (no longer buys immediately). (3) Added a primary CTA button (testID premium-subscribe) that triggers the purchase for the selected plan; CTA label is trial-aware (premium.ctaTrial for Monthly, premium.cta for Yearly). No change to StoreKit/SKU/iap.native.ts/Premium logic. TEST ON WEB (IAP disabled -> FALLBACK euro plans): open /premium, verify Monthly=4,99 €/mois & Yearly=59,99 €/an, default selection is Yearly, tapping Monthly moves the radio+highlight to Monthly and CTA becomes 'Commencer l'essai gratuit', tapping Yearly moves it back and CTA becomes 'Devenir Premium'. Do NOT attempt real payment/Stripe checkout completion."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "TESTED on web at /premium. ALL CRITICAL TESTS PASSED: (1) Currency - Monthly displays '4,99 €' with '/ mois', Yearly displays '59,99 €' with '/ an'. No user-visible dollar signs (only found in Cloudflare CDN security script which is not user-facing). (2) Default selection - Yearly is selected on load with filled radio button, blue border, and CTA button reads 'Devenir Premium'. (3) Plan selection follows tap - Clicking Monthly moves selection (filled radio + blue border to Monthly), CTA changes to 'Commencer l'essai gratuit'. Clicking Yearly moves selection back, CTA returns to 'Devenir Premium'. (4) Badges - Monthly shows '7 jours offerts', Yearly shows 'Meilleure offre' and does NOT show '7 jours offerts'. Screenshots confirm visual selection state changes correctly. Bug fix is successful and working as expected."
 
 ## metadata:
 ##   created_by: "main_agent"
 ##   version: "1.1"
-##   test_sequence: 6
+##   test_sequence: 7
 
 ## test_plan:
 ##   current_focus:
 ##     - "Account deletion double-confirmation flow (profile.tsx)"
 ##     - "Premium screen StoreKit(iOS)/Stripe(web) split (premium.tsx)"
+##     - "Health screen HealthKit(iOS)/mock(web) (health.tsx)"
+##     - "Global Error Boundary + ATT prompt (_layout.tsx)"
 ##   stuck_tasks: []
 ##   test_all: false
 ##   test_priority: "high_first"
@@ -165,3 +181,7 @@
 ## agent_communication:
 ##     -agent: "main"
 ##     -message: "Iteration 6: iOS-native features (StoreKit via expo-iap, HealthKit) added behind Platform/appOwnership guards + platform-split lib files (iap.native/web, healthkit.native/web, tracking.native/web) so the web bundle never imports native modules. Please test FRONTEND ONLY on web: (1) login with mobiletest123@aqua.com / Test1234!, (2) Profile -> Danger Zone -> Delete account -> double confirmation modal (Continue then Delete permanently) — expect graceful error toast since remote DELETE /account is not deployed yet, (3) Premium screen renders with Stripe CTA on web, (4) Health screen shows locked card for free user. Do NOT attempt real payment. Native StoreKit/HealthKit cannot be tested on web (expected)."
+##     -agent: "main"
+##     -message: "Iteration 7 (bug fix): Premium paywall pricing/selection. Test FRONTEND ONLY on web at route /premium (no login required to render the paywall). Focus: (A) prices shown in EUROS — Monthly card = '4,99 €' with '/ mois', Yearly card = '59,99 €' with '/ an'; there must be NO '$' anywhere. (B) plan selection — on load the Yearly card is selected (filled radio-button-on + blue border, testID premium-plan-yearly) and the CTA button (testID premium-subscribe) reads 'Devenir Premium'; tapping the Monthly card (testID premium-plan-monthly) must move the selection to Monthly (its radio becomes filled, Yearly becomes unselected) and the CTA label must change to 'Commencer l'essai gratuit'; tapping Yearly again moves selection back and CTA returns to 'Devenir Premium'. (C) the Monthly card shows a '7 jours offerts' badge, the Yearly card does NOT. Do NOT complete any Stripe checkout (tapping the CTA on web opens a Stripe redirect — just verify the button exists/labels; no real payment)."
+##     -agent: "testing"
+##     -message: "Iteration 7 COMPLETE: Premium paywall bug fix verified and working correctly. All critical requirements passed: euro pricing (4,99 € / 59,99 €), no user-visible dollar signs, default Yearly selection, plan selection follows taps correctly with proper CTA label changes ('Devenir Premium' for Yearly, 'Commencer l'essai gratuit' for Monthly), and correct badges. The task is marked as working=true. Remaining tasks from Iteration 6 still need testing: Account deletion flow, Premium screen Stripe CTA, Health screen locked state, and Error Boundary."
