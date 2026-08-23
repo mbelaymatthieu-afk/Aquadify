@@ -12,10 +12,12 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.mtagency.aquadify",
       "buildNumber": "23",
+      "usesAppleSignIn": true,
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicit\u00e9s pertinentes dans la version gratuite.",
         "NSHealthShareUsageDescription": "Aquadify utilise vos donn\u00e9es d\u2019activit\u00e9 Apple Sant\u00e9 afin de personnaliser votre objectif d\u2019hydratation et vos recommandations.",
         "NSHealthUpdateUsageDescription": "Aquadify peut enregistrer certaines informations li\u00e9es \u00e0 votre hydratation dans Apple Sant\u00e9 lorsque vous activez cette fonctionnalit\u00e9.",
+        "NSLocationWhenInUseUsageDescription": "Localiser les points d'eau potable proches de vous.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -50,12 +52,26 @@
           "androidAppId": "ca-app-pub-8009813538542789~2818700603",
           "iosAppId": "ca-app-pub-8009813538542789~7753483038"
         }
+      ],
+      "expo-apple-authentication",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Localiser les points d'eau potable proches de vous."
+        }
+      ],
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "background": false
+        }
       ]
     ],
     "experiments": {
       "typedRoutes": true
     },
     "extra": {
+      "aquadifyApiUrl": "https://drip-track-1.emergent.host/api",
       "router": {},
       "eas": {
         "projectId": "c25c13e4-9fe7-49d8-8605-540fe90824e2"
