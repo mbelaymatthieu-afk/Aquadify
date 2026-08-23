@@ -103,6 +103,22 @@
 #====================================================================================================
 ## user_problem_statement: iOS-only update — replace Stripe with Apple StoreKit 2 (expo-iap), real Apple HealthKit for Premium, real account deletion (double confirmation), ATT prompt + global Error Boundary. Native features must be guarded so the web preview never crashes.
 
+## backend:
+##   - task: "IAP verification endpoint accepts signedTransaction field"
+##     implemented: true
+##     working: true
+##     file: "backend/server.py (remote endpoint /api/iap/verify)"
+##     stuck_count: 0
+##     priority: "high"
+##     needs_retesting: false
+##     status_history:
+##         -working: "NA"
+##         -agent: "main"
+##         -comment: "Bug fix deployed to remote backend https://drip-track-1.emergent.host/api. The /api/iap/verify endpoint was returning 422 'Field required' for signedTransaction. Frontend (src/api/account.ts) was fixed to send signedTransaction mapped from StoreKit JWS. Backend contract needs verification."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "VERIFIED on remote backend https://drip-track-1.emergent.host/api. ALL 4 TEST STEPS PASSED: (1) Authentication successful with mobiletest123@aqua.com - Bearer token obtained. (2) OLD body (without signedTransaction) correctly returns HTTP 422 with detail 'Field required' at loc ['body','signedTransaction'] - confirms the field is required. (3) FIXED body (with signedTransaction) returns HTTP 400 'Apple signature verification failed' - the 422 'Field required' error is GONE, proving the field is now accepted and validation proceeds to signature check (400 is expected for dummy JWS). (4) Request without auth token correctly returns HTTP 401 'Not authenticated'. BUG FIX CONFIRMED: The backend endpoint contract now matches the mobile app payload. The signedTransaction field is accepted and the 422 error is resolved."
+
 ## frontend:
 ##   - task: "Account deletion double-confirmation flow (profile.tsx)"
 ##     implemented: true
@@ -168,15 +184,12 @@
 
 ## metadata:
 ##   created_by: "main_agent"
-##   version: "1.1"
-##   test_sequence: 8
+##   version: "1.2"
+##   test_sequence: 9
 
 ## test_plan:
 ##   current_focus:
-##     - "Account deletion double-confirmation flow (profile.tsx)"
-##     - "Premium screen StoreKit(iOS)/Stripe(web) split (premium.tsx)"
-##     - "Health screen HealthKit(iOS)/mock(web) (health.tsx)"
-##     - "Global Error Boundary + ATT prompt (_layout.tsx)"
+##     - "IAP verification endpoint accepts signedTransaction field"
 ##   stuck_tasks: []
 ##   test_all: false
 ##   test_priority: "high_first"
@@ -192,3 +205,5 @@
 ##     -message: "Iteration 8 (TestFlight purchase bug fix): ANNUAL got stuck on spinner after Apple confirmation and never went Premium; MONTHLY never reached the confirmation / CTA seemed inert. Root cause: premium.tsx relied only on purchaseUpdatedListener to verify AND clear busy, but expo-iap v4 de-dupes iOS purchase events (replayed/unfinished transactions suppressed) so the listener could never fire -> busy stayed true forever. Fix: iap.native.ts requestSubscription now RETURNS the purchase (iOS requestPurchase resolves with the transaction; no SKU/payload change); premium.tsx buy() verifies that returned purchase directly (processPurchase) and ALWAYS clears busy in finally; listener kept as fallback (handledRef-guarded); refreshUser() added after verify. TESTING SCOPE: the real StoreKit purchase CANNOT run on the web preview (IAP disabled). Please FRONTEND-test on web at /premium to confirm NO REGRESSION only: paywall renders, euro prices (Monthly 4,99 €/mois, Yearly 59,99 €/an, no '$'), default Yearly selected with CTA 'Devenir Premium', tapping Monthly moves selection and changes CTA to 'Commencer l'essai gratuit', tapping Yearly reverts. Do NOT complete any Stripe/payment redirect. The annual/monthly StoreKit completion itself is validated on TestFlight by the user."
 ##     -agent: "testing"
 ##     -message: "Iteration 8 REGRESSION TEST COMPLETE: NO REGRESSION detected after purchase-flow refactor. All critical paywall UI functionality verified working: (1) Page renders without infinite spinner, plan cards and CTA visible. (2) Currency correct in euros (Monthly 4,99 €/mois, Yearly 59,99 €/an, no dollar signs). (3) Default Yearly selection with blue border and 'Devenir Premium' CTA. (4) Plan selection interaction working - clicking Monthly/Yearly moves blue border and changes CTA text correctly. (5) Badges correct (Monthly '7 jours offerts', Yearly 'Meilleure offre'). (6) Screen fully interactive, no stuck spinner. The changes to requestSubscription return handling and setBusy finally block did not break any web preview functionality. Real StoreKit purchases cannot be tested on web as expected (IAP disabled)."
+##     -agent: "testing"
+##     -message: "Iteration 9 (IAP Backend Bug Fix Verification): COMPLETE. Tested remote backend endpoint POST https://drip-track-1.emergent.host/api/iap/verify. ALL TESTS PASSED: (1) Authentication works - obtained Bearer token with mobiletest123@aqua.com. (2) OLD body without signedTransaction correctly returns 422 'Field required' error. (3) FIXED body WITH signedTransaction no longer returns 422 - instead returns 400 'Apple signature verification failed' (expected for dummy JWS, proves field is accepted). (4) Endpoint requires auth - returns 401 without token. BUG FIX VERIFIED: The backend contract now matches the mobile app. The signedTransaction field is accepted and the 422 error is resolved. The endpoint proceeds to signature validation as expected."

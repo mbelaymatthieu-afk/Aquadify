@@ -14,5 +14,13 @@ export async function verifyIapPurchase(
   payload: { product_id: string; transaction_id?: string; jws?: string },
   token: string | null,
 ): Promise<any> {
-  return api.post("/iap/verify", payload, token);
+  // The deployed backend requires the StoreKit 2 signed transaction JWS under
+  // the key `signedTransaction`. Map our jws to it (extra keys are ignored).
+  const body = {
+    signedTransaction: payload.jws,
+    product_id: payload.product_id,
+    transaction_id: payload.transaction_id,
+    jws: payload.jws,
+  };
+  return api.post("/iap/verify", body, token);
 }
