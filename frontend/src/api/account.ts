@@ -11,13 +11,21 @@ export async function deleteAccount(token: string | null): Promise<void> {
 // Returns the updated user on success. Throws if the endpoint is missing
 // (not yet deployed) or verification fails.
 export async function verifyIapPurchase(
-  payload: { product_id: string; transaction_id?: string; jws?: string },
+  payload: {
+    product_id: string;
+    transaction_id?: string;
+    jws?: string;
+    appAccountToken?: string | null;
+  },
   token: string | null,
 ): Promise<any> {
   // The deployed backend requires the StoreKit 2 signed transaction JWS under
   // the key `signedTransaction`. Map our jws to it (extra keys are ignored).
+  // `appAccountToken` (stable per-account UUID) is also sent so the backend can
+  // bind the subscription to the authenticated Aquadify account.
   const body = {
     signedTransaction: payload.jws,
+    appAccountToken: payload.appAccountToken ?? undefined,
     product_id: payload.product_id,
     transaction_id: payload.transaction_id,
     jws: payload.jws,

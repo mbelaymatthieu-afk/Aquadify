@@ -182,18 +182,29 @@ export function addPurchaseListeners(
 
 export async function requestSubscription(
   sku: string,
+  appAccountToken?: string | null,
 ): Promise<any> {
   if (!IAP_ENABLED) return null;
 
   console.log(
     "[IAP] requestSubscription SKU:",
     sku,
+    "appAccountToken:",
+    appAccountToken || "(none)",
   );
 
   if (!PRODUCT_IDS.includes(sku)) {
     throw new Error(
       `Unknown Aquadify subscription SKU: ${sku}`,
     );
+  }
+
+  // Attach the stable per-account UUID so StoreKit embeds it in the signed
+  // transaction and the backend can bind the subscription to this Aquadify
+  // account. SKU/product config is untouched.
+  const apple: { sku: string; appAccountToken?: string } = { sku };
+  if (appAccountToken) {
+    apple.appAccountToken = appAccountToken;
   }
 
   try {
@@ -203,9 +214,7 @@ export async function requestSubscription(
     // transactions and can be suppressed for replayed/unfinished ones).
     const result = await iap().requestPurchase({
       request: {
-        apple: {
-          sku,
-        },
+        apple,
       },
       type: "subs",
     });

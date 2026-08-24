@@ -118,6 +118,9 @@
 ##         -working: true
 ##         -agent: "testing"
 ##         -comment: "VERIFIED on remote backend https://drip-track-1.emergent.host/api. ALL 4 TEST STEPS PASSED: (1) Authentication successful with mobiletest123@aqua.com - Bearer token obtained. (2) OLD body (without signedTransaction) correctly returns HTTP 422 with detail 'Field required' at loc ['body','signedTransaction'] - confirms the field is required. (3) FIXED body (with signedTransaction) returns HTTP 400 'Apple signature verification failed' - the 422 'Field required' error is GONE, proving the field is now accepted and validation proceeds to signature check (400 is expected for dummy JWS). (4) Request without auth token correctly returns HTTP 401 'Not authenticated'. BUG FIX CONFIRMED: The backend endpoint contract now matches the mobile app payload. The signedTransaction field is accepted and the 422 error is resolved."
+##         -working: true
+##         -agent: "testing"
+##         -comment: "CONTRACT VERIFICATION (Iteration 10 - appAccountToken field addition): ALL 4 STEPS PASSED. Verified the endpoint now accepts BOTH signedTransaction AND appAccountToken fields together (the exact payload mobile app now sends). (1) Authentication successful - Bearer token obtained with mobiletest123@aqua.com. (2) POST with body containing BOTH signedTransaction='dummy.jws.token' AND appAccountToken='66f136e6-b495-58cc-bffd-67ea129fc210' returns HTTP 400 'Apple signature verification failed' (NOT 422) - proves both fields are accepted and validation proceeds to signature check. (3) POST WITHOUT signedTransaction correctly returns HTTP 422 'Field required' at loc ['body','signedTransaction'] - confirms required-field guard is intact (no regression). (4) POST without auth token correctly returns HTTP 401 'Not authenticated' - auth enforcement working. NO REGRESSION: The addition of appAccountToken field does NOT cause validation errors. The endpoint contract is backward-compatible and accepts the new mobile payload structure."
 
 ## frontend:
 ##   - task: "Account deletion double-confirmation flow (profile.tsx)"
@@ -185,7 +188,7 @@
 ## metadata:
 ##   created_by: "main_agent"
 ##   version: "1.2"
-##   test_sequence: 9
+##   test_sequence: 10
 
 ## test_plan:
 ##   current_focus:
@@ -207,3 +210,5 @@
 ##     -message: "Iteration 8 REGRESSION TEST COMPLETE: NO REGRESSION detected after purchase-flow refactor. All critical paywall UI functionality verified working: (1) Page renders without infinite spinner, plan cards and CTA visible. (2) Currency correct in euros (Monthly 4,99 €/mois, Yearly 59,99 €/an, no dollar signs). (3) Default Yearly selection with blue border and 'Devenir Premium' CTA. (4) Plan selection interaction working - clicking Monthly/Yearly moves blue border and changes CTA text correctly. (5) Badges correct (Monthly '7 jours offerts', Yearly 'Meilleure offre'). (6) Screen fully interactive, no stuck spinner. The changes to requestSubscription return handling and setBusy finally block did not break any web preview functionality. Real StoreKit purchases cannot be tested on web as expected (IAP disabled)."
 ##     -agent: "testing"
 ##     -message: "Iteration 9 (IAP Backend Bug Fix Verification): COMPLETE. Tested remote backend endpoint POST https://drip-track-1.emergent.host/api/iap/verify. ALL TESTS PASSED: (1) Authentication works - obtained Bearer token with mobiletest123@aqua.com. (2) OLD body without signedTransaction correctly returns 422 'Field required' error. (3) FIXED body WITH signedTransaction no longer returns 422 - instead returns 400 'Apple signature verification failed' (expected for dummy JWS, proves field is accepted). (4) Endpoint requires auth - returns 401 without token. BUG FIX VERIFIED: The backend contract now matches the mobile app. The signedTransaction field is accepted and the 422 error is resolved. The endpoint proceeds to signature validation as expected."
+##     -agent: "testing"
+##     -message: "Iteration 10 (IAP Contract Verification - appAccountToken field): COMPLETE. Verified the /api/iap/verify endpoint on deployed remote backend https://drip-track-1.emergent.host/api after mobile app started sending appAccountToken field in addition to signedTransaction. ALL 4 STEPS PASSED: (1) Authentication successful with mobiletest123@aqua.com. (2) POST with BOTH signedTransaction AND appAccountToken returns HTTP 400 'Apple signature verification failed' (NOT 422) - proves both fields are accepted and no validation error occurs. (3) POST WITHOUT signedTransaction returns HTTP 422 'Field required' - confirms required-field guard is still intact (no regression). (4) POST without auth token returns HTTP 401 - auth enforcement working. CONTRACT VERIFICATION SUCCESSFUL: The endpoint accepts the new mobile payload structure (signedTransaction + appAccountToken) without breaking backward compatibility. No regression detected."

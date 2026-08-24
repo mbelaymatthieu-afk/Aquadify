@@ -29,7 +29,10 @@ export function addPurchaseListeners(
 ): () => void {
   return () => {};
 }
-export async function requestSubscription(_sku: string): Promise<void> {}
+export async function requestSubscription(
+  _sku: string,
+  _appAccountToken?: string | null,
+): Promise<void> {}
 export async function finishPurchase(_purchase: any): Promise<void> {}
 export async function restoreAndCheck(): Promise<boolean> {
   return false;

@@ -35,6 +35,7 @@ import {
   requestSubscription,
   restoreAndCheck,
 } from "@/src/lib/iap";
+import { accountAppAccountToken } from "@/src/lib/appAccountToken";
 
 const ORIGIN = "https://drip-track-1.emergent.host";
 
@@ -65,6 +66,10 @@ export default function PremiumScreen() {
   const { token, user, setUser, refreshUser } = useAuth();
   const toast = useToast();
 
+  // Stable per-account Apple appAccountToken (UUID). Recomputed cheaply from the
+  // authenticated account id; identical across devices/reinstalls.
+  const appAccountToken = accountAppAccountToken(user?.id ?? null);
+
   const [busy, setBusy] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -83,6 +88,7 @@ export default function PremiumScreen() {
     product_id: string;
     transaction_id?: string;
     jws?: string;
+    appAccountToken?: string | null;
   }) => {
     const updated = await verifyIapPurchase(payload, token);
     setUser(updated);
@@ -117,6 +123,11 @@ export default function PremiumScreen() {
       product_id: productId,
       transaction_id: transactionId,
       jws,
+      // Prefer the token StoreKit echoed back on the transaction; fall back to
+      // the stable per-account UUID we computed.
+      appAccountToken:
+        purchase?.appAccountToken ??
+        appAccountToken,
     });
 
     // Only finish once the backend confirmed ownership.
@@ -214,7 +225,7 @@ export default function PremiumScreen() {
       // purchaseUpdatedListener (which StoreKit de-duplicates and can suppress
       // for replayed/unfinished transactions). setBusy(false) is guaranteed in
       // the finally block, so the spinner can no longer get stuck.
-      const result = await requestSubscription(sku);
+      const result = await requestSubscription(sku, appAccountToken);
       const purchase = Array.isArray(result) ? result[0] : result;
 
       if (purchase && !handledRef.current) {
