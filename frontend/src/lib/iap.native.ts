@@ -301,3 +301,58 @@ export async function hasActive(): Promise<boolean> {
     return false;
   }
 }
+
+// Sync with the App Store, then return the user's ACTIVE Aquadify purchases.
+// Each purchase carries the signed StoreKit 2 JWS, used for POST /iap/restore.
+export async function getRestorablePurchases(): Promise<any[]> {
+  if (!IAP_ENABLED) return [];
+
+  // Best-effort sync so StoreKit refreshes entitlements before we read them.
+  try {
+    await iap().restorePurchases();
+  } catch (e: any) {
+    console.log(
+      "[IAP] restorePurchases (sync) warning:",
+      e?.message,
+    );
+  }
+
+  try {
+    const purchases = await iap().getAvailablePurchases({
+      onlyIncludeActiveItemsIOS: true,
+      alsoPublishToEventListenerIOS: false,
+    });
+
+    const list = Array.isArray(purchases) ? purchases : [];
+
+    const ours = list.filter((p: any) => {
+      const pid =
+        p?.productId ?? p?.id ?? p?.ids?.[0];
+      return PRODUCT_IDS.includes(pid);
+    });
+
+    console.log(
+      "[IAP] restorable purchases:",
+      ours.length,
+    );
+
+    return ours;
+  } catch (e: any) {
+    console.log(
+      "[IAP] getAvailablePurchases FAILED:",
+      e?.code,
+      e?.message,
+      e,
+    );
+
+    throw e;
+  }
+}
+
+// Opens Apple's NATIVE subscription-management sheet (StoreKit). Works during a
+// free-trial period too. No custom URL / Aquadify page.
+export async function openManageSubscriptions(): Promise<void> {
+  if (!IAP_ENABLED) return;
+
+  await iap().deepLinkToSubscriptions();
+}

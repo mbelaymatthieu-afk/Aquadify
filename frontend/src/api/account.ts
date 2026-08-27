@@ -32,3 +32,18 @@ export async function verifyIapPurchase(
   };
   return api.post("/iap/verify", body, token);
 }
+
+// Restore a StoreKit purchase server-side. Sends EXACTLY the signed transaction
+// JWS + the stable per-account appAccountToken. Returns the updated user on
+// success. Throws (incl. 409 when the subscription belongs to another account)
+// so the caller can handle it — Premium is NEVER granted locally.
+export async function restoreIapPurchase(
+  payload: { jws?: string; appAccountToken?: string | null },
+  token: string | null,
+): Promise<any> {
+  const body = {
+    signedTransaction: payload.jws,
+    appAccountToken: payload.appAccountToken ?? undefined,
+  };
+  return api.post("/iap/restore", body, token);
+}

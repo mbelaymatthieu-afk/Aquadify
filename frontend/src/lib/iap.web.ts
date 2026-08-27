@@ -40,6 +40,10 @@ export async function restoreAndCheck(): Promise<boolean> {
 export async function hasActive(): Promise<boolean> {
   return false;
 }
+export async function getRestorablePurchases(): Promise<any[]> {
+  return [];
+}
+export async function openManageSubscriptions(): Promise<void> {}
 
 // Keep Platform import referenced so tree-shakers don't warn.
 void Platform.OS;

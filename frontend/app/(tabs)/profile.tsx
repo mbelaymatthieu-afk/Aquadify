@@ -24,6 +24,7 @@ import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { LANGS } from "@/src/i18n/translations";
 import { ensureNotificationPermission, scheduleHydrationReminders } from "@/src/lib/reminders";
+import { openManageSubscriptions } from "@/src/lib/iap";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
 
 const INTERVALS = [60, 90, 120, 180];
@@ -372,11 +373,9 @@ export default function ProfileScreen() {
               {Platform.OS === "ios" && (
                 <Pressable
                   testID="profile-manage-sub"
-                  onPress={() =>
-                    Linking.openURL(
-                      "https://apps.apple.com/account/subscriptions",
-                    ).catch(() => {})
-                  }
+                  onPress={() => {
+                    openManageSubscriptions().catch(() => {});
+                  }}
                   style={[styles.card, styles.manageRow]}
                 >
                   <Ionicons

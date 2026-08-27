@@ -5,7 +5,6 @@ import * as WebBrowser from "expo-web-browser";
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -19,7 +18,7 @@ import { Mascot } from "@/src/components/Mascot";
 import { PremiumSuccess } from "@/src/components/PremiumSuccess";
 import { useToast } from "@/src/components/Toast";
 import { api } from "@/src/api/client";
-import { verifyIapPurchase } from "@/src/api/account";
+import { verifyIapPurchase, restoreIapPurchase } from "@/src/api/account";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
@@ -30,10 +29,11 @@ import {
   SKU_YEARLY,
   addPurchaseListeners,
   finishPurchase,
+  getRestorablePurchases,
   getSubscriptions,
   initIap,
+  openManageSubscriptions,
   requestSubscription,
-  restoreAndCheck,
 } from "@/src/lib/iap";
 import { accountAppAccountToken } from "@/src/lib/appAccountToken";
 
@@ -252,39 +252,73 @@ export default function PremiumScreen() {
   };
 
   const restore = async () => {
+    if (busy) return;
+
     setBusy(true);
 
     try {
-      // Trigger the native StoreKit restore. Restored transactions are emitted
-      // through the purchase listener above, which forwards each JWS to the
-      // backend (/iap/verify) with the current account's Bearer token so the
-      // backend can validate the transaction and check ownership.
-      // NOTE: restoreAndCheck() returns a DEVICE-LEVEL boolean — it is
-      // intentionally IGNORED here and never used to grant Premium.
-      await restoreAndCheck();
+      // Fetch the REAL Apple transactions for this device (each carries a
+      // signed StoreKit 2 JWS). Never trust device-level booleans for Premium.
+      const purchases = await getRestorablePurchases();
 
-      // Let the listener-driven backend verification settle, then trust ONLY
-      // the backend's account-level answer.
-      await new Promise((r) => setTimeout(r, 1500));
-
-      let confirmed = false;
-      try {
-        const me = await api.get<typeof user>("/auth/me", token);
-        if (me) setUser(me as any);
-        confirmed = !!me?.is_premium;
-      } catch {
-        confirmed = false;
+      if (!purchases || purchases.length === 0) {
+        toast.show(t("premium.restoreNone"), "info");
+        return;
       }
 
-      if (confirmed) {
+      let restored = false;
+      let conflict = false;
+
+      for (const p of purchases) {
+        const jws =
+          p?.purchaseToken ?? p?.jwsRepresentationIOS;
+        if (!jws) continue;
+
+        try {
+          // POST /iap/restore with EXACTLY signedTransaction + appAccountToken.
+          const updated = await restoreIapPurchase(
+            {
+              jws,
+              appAccountToken:
+                p?.appAccountToken ?? appAccountToken,
+            },
+            token,
+          );
+          if (updated) setUser(updated);
+          restored = true;
+        } catch (e: any) {
+          // 409 => this subscription is bound to another Aquadify account.
+          if (e?.status === 409) conflict = true;
+          // keep trying any other transactions
+        }
+      }
+
+      if (restored) {
+        // Backend is the source of truth — re-sync, never set is_premium here.
+        await refreshUser();
         setShowSuccess(true);
         toast.show(t("premium.restoreDone"), "success");
+      } else if (conflict) {
+        toast.show(t("premium.restoreConflict"), "error");
       } else {
-        // Secure failure: never unlock Premium locally.
         toast.show(t("premium.restoreUnavailable"), "info");
       }
+    } catch {
+      toast.show(t("premium.restoreUnavailable"), "info");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const manageSubscription = async () => {
+    try {
+      // Native Apple subscription management (works during a free trial too).
+      await openManageSubscriptions();
+    } catch (e: any) {
+      toast.show(
+        e?.message || t("premium.failed"),
+        "error",
+      );
     }
   };
 
@@ -614,11 +648,7 @@ export default function PremiumScreen() {
         {IAP_ENABLED && user?.is_premium && (
           <Pressable
             testID="premium-manage"
-            onPress={() =>
-              Linking.openURL(
-                "https://apps.apple.com/account/subscriptions"
-              ).catch(() => {})
-            }
+            onPress={manageSubscription}
             style={({ pressed }) => [
               styles.manageBtn,
               pressed && {
