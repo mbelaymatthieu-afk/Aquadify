@@ -63,7 +63,7 @@ export default function PremiumScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { t } = useI18n();
-  const { token, user, setUser, refreshUser } = useAuth();
+  const { token, user, setUser, refreshUser, ensureValidSession } = useAuth();
   const toast = useToast();
 
   // Stable per-account Apple appAccountToken (UUID). Recomputed cheaply from the
@@ -220,6 +220,10 @@ export default function PremiumScreen() {
     handledRef.current = false;
 
     try {
+      // Ensure the Bearer token is present & valid (7-day expiry) BEFORE we
+      // start an Apple purchase, so the transaction can be attached server-side.
+      if (!(await requireSession())) return;
+
       // PRIMARY path: on iOS requestPurchase resolves with the completed
       // transaction. We verify it directly here so we never depend on the
       // purchaseUpdatedListener (which StoreKit de-duplicates and can suppress
@@ -257,6 +261,9 @@ export default function PremiumScreen() {
     setBusy(true);
 
     try {
+      // Ensure a valid (non-expired) Bearer token before /iap/restore.
+      if (!(await requireSession())) return;
+
       // Fetch the REAL Apple transactions for this device (each carries a
       // signed StoreKit 2 JWS). Never trust device-level booleans for Premium.
       const purchases = await getRestorablePurchases();
@@ -320,6 +327,18 @@ export default function PremiumScreen() {
         "error",
       );
     }
+  };
+
+  // Guarantees a valid (non-expired) session before hitting /iap/verify or
+  // /iap/restore. Session tokens expire after 7 days; if invalid we stop and
+  // route the user to sign in again rather than starting an Apple flow.
+  const requireSession = async (): Promise<boolean> => {
+    const ok = await ensureValidSession();
+    if (!ok) {
+      toast.show(t("premium.sessionExpired"), "error");
+      router.replace("/auth");
+    }
+    return ok;
   };
 
   const pollStatus = async (sessionId: string) => {

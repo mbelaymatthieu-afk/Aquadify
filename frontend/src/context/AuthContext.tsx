@@ -6,6 +6,7 @@ import { Platform } from "react-native";
 import { api } from "@/src/api/client";
 import { signInWithApple } from "@/src/lib/apple";
 import { storage } from "@/src/utils/storage";
+import { isJwtExpired } from "@/src/utils/jwt";
 
 const TOKEN_KEY = "aquadify_token";
 
@@ -50,6 +51,7 @@ type AuthValue = {
   appleLogin: () => Promise<boolean>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  ensureValidSession: () => Promise<boolean>;
   setUser: (u: AquaUser) => void;
 };
 
@@ -205,6 +207,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(me);
   };
 
+  // Ensures the session token is present and still valid before sensitive calls
+  // (e.g. /iap/verify, /iap/restore). Tokens expire after 7 days. Fails safely:
+  // if there is no token, it is locally expired, or the backend rejects it
+  // (401), the session is cleared and `false` is returned so the caller can
+  // stop and ask the user to sign in again.
+  const ensureValidSession = async (): Promise<boolean> => {
+    if (!token) return false;
+
+    if (isJwtExpired(token)) {
+      await logout();
+      return false;
+    }
+
+    try {
+      const me = await api.get<AquaUser>("/auth/me", token);
+      setUser(me);
+      return true;
+    } catch (e: any) {
+      if (e?.status === 401) {
+        await logout();
+        return false;
+      }
+      // Transient/offline error but token is not locally expired: allow the
+      // call to proceed (the backend still enforces auth on the request).
+      return true;
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -221,6 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         appleLogin,
         logout,
         refreshUser,
+        ensureValidSession,
         setUser,
       }}
     >
