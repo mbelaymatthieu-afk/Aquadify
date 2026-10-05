@@ -692,9 +692,19 @@ export default function PremiumScreen() {
             testID="premium-restore"
             onPress={restore}
             disabled={busy}
-            style={styles.restoreBtnBottom}
+            style={({ pressed }) => [
+              styles.restoreBtn,
+              busy && { opacity: 0.6 },
+              pressed && { opacity: 0.9 },
+            ]}
           >
-            <Text style={styles.restoreTextBottom}>
+            <Ionicons
+              name="refresh"
+              size={18}
+              color={colors.white}
+            />
+
+            <Text style={styles.restoreBtnText}>
               {t("premium.restore")}
             </Text>
           </Pressable>
@@ -923,21 +933,25 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  restoreBtnBottom: {
-    alignSelf: "center",
-    marginTop: spacing.lg,
-    paddingVertical: spacing.sm,
-    paddingHorizontal:
-      spacing.md,
+  restoreBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: spacing.sm,
+    backgroundColor:
+      "rgba(255,255,255,0.18)",
+    borderRadius: radius.pill,
+    minHeight: 50,
+    marginTop: spacing.md,
+    borderWidth: 1,
+    borderColor:
+      "rgba(255,255,255,0.35)",
   },
 
-  restoreTextBottom: {
-    color:
-      "rgba(255,255,255,0.75)",
-    fontSize: font.tiny,
-    fontWeight: "600",
-    textDecorationLine:
-      "underline",
+  restoreBtnText: {
+    color: colors.white,
+    fontSize: font.small,
+    fontWeight: "700",
   },
 
   manageBtn: {
