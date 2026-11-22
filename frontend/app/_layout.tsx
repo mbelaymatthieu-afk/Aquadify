@@ -3,8 +3,6 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { LogBox } from "react-native";
 
-import { initAds } from "@/src/lib/ads";
-import { requestTrackingPermission } from "@/src/lib/tracking";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -33,15 +31,6 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded, error]);
-
-  // Ask for App Tracking Transparency (iOS) BEFORE initializing AdMob, then
-  // initialize the SDK. Both are native-build-only no-ops in Expo Go/web.
-  useEffect(() => {
-    (async () => {
-      await requestTrackingPermission();
-      initAds();
-    })();
-  }, []);
 
   // If the CDN is unreachable we fall through on error rather than wedging
   // the app — icons will tofu, but the app still boots.

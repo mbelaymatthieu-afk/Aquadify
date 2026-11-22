@@ -1,3 +1,5 @@
+import { releaseDict } from "./release";
+
 export type Lang = "fr" | "en" | "es";
 
 export const LANGS: { code: Lang; flag: string; label: string }[] = [
@@ -290,7 +292,7 @@ export const dict: Record<Lang, any> = {
     },
     privacy: {
       title: "Politique de confidentialité",
-      body: "Aquadify respecte votre vie privée.\n\nDonnées collectées : votre e-mail et nom (compte), vos prises d'eau et objectifs, vos réglages. Ces données servent uniquement à faire fonctionner l'application et personnaliser votre suivi.\n\nSanté : les données d'activité (pas, entraînements) ne sont lues qu'avec votre autorisation explicite (Premium) et servent uniquement à adapter votre hydratation. Elles ne sont jamais vendues.\n\nPublicité : la version gratuite affiche des publicités via Google AdMob. Les utilisateurs Premium n'ont aucune publicité.\n\nLocalisation : utilisée uniquement, et à la demande, pour afficher les points d'eau proches. Aucune localisation en arrière-plan.\n\nSuppression : vous pouvez supprimer votre compte et vos données à tout moment depuis l'application.\n\nContact : support@aquadify.com",
+      body: "Aquadify respecte votre vie privée.\n\nDonnées collectées : votre e-mail et nom (compte), vos prises d'eau et objectifs, vos réglages. Ces données servent uniquement à faire fonctionner l'application et personnaliser votre suivi.\n\nSanté : les données d'activité (pas, entraînements) ne sont lues qu'avec votre autorisation explicite (Premium) et servent uniquement à adapter votre hydratation. Elles ne sont jamais vendues.\n\nIA : avec votre accord, vos messages au coach et vos statistiques d'hydratation sont envoyés à Google Gemini et OpenAI pour générer vos réponses. Vos données Apple Santé ne leur sont jamais transmises.\n\nPublicité : la version gratuite affiche des publicités via Google AdMob. Les utilisateurs Premium n'ont aucune publicité.\n\nLocalisation : utilisée uniquement, et à la demande, pour afficher les points d'eau proches. Aucune localisation en arrière-plan.\n\nSuppression : vous pouvez supprimer votre compte et vos données à tout moment depuis l'application.\n\nContact : support@aquadify.com",
       contactSupport: "Contacter le support",
     },
     badges: {
@@ -594,7 +596,7 @@ export const dict: Record<Lang, any> = {
     },
     privacy: {
       title: "Privacy policy",
-      body: "Aquadify respects your privacy.\n\nData collected: your email and name (account), your water logs and goals, your settings. This data is used only to run the app and personalize your tracking.\n\nHealth: activity data (steps, workouts) is read only with your explicit permission (Premium) and used only to adapt your hydration. It is never sold.\n\nAds: the free version shows ads via Google AdMob. Premium users see no ads.\n\nLocation: used only, on demand, to show nearby water points. No background location.\n\nDeletion: you can delete your account and data anytime from the app.\n\nContact: support@aquadify.com",
+      body: "Aquadify respects your privacy.\n\nData collected: your email and name (account), your water logs and goals, your settings. This data is used only to run the app and personalize your tracking.\n\nHealth: activity data (steps, workouts) is read only with your explicit permission (Premium) and used only to adapt your hydration. It is never sold.\n\nAI: with your consent, your coach messages and hydration statistics are sent to Google Gemini and OpenAI to generate your answers. Your Apple Health data is never sent to them.\n\nAds: the free version shows ads via Google AdMob. Premium users see no ads.\n\nLocation: used only, on demand, to show nearby water points. No background location.\n\nDeletion: you can delete your account and data anytime from the app.\n\nContact: support@aquadify.com",
       contactSupport: "Contact support",
     },
     badges: {
@@ -898,7 +900,7 @@ export const dict: Record<Lang, any> = {
     },
     privacy: {
       title: "Política de privacidad",
-      body: "Aquadify respeta tu privacidad.\n\nDatos recopilados: tu correo y nombre (cuenta), tus registros de agua y objetivos, tus ajustes. Se usan solo para el funcionamiento de la app y personalizar tu seguimiento.\n\nSalud: los datos de actividad (pasos, entrenamientos) se leen solo con tu permiso explícito (Premium) y se usan solo para adaptar tu hidratación. Nunca se venden.\n\nPublicidad: la versión gratuita muestra anuncios de Google AdMob. Los usuarios Premium no ven anuncios.\n\nUbicación: se usa solo, a demanda, para mostrar puntos de agua cercanos. Sin ubicación en segundo plano.\n\nEliminación: puedes eliminar tu cuenta y datos en cualquier momento desde la app.\n\nContacto: support@aquadify.com",
+      body: "Aquadify respeta tu privacidad.\n\nDatos recopilados: tu correo y nombre (cuenta), tus registros de agua y objetivos, tus ajustes. Se usan solo para el funcionamiento de la app y personalizar tu seguimiento.\n\nSalud: los datos de actividad (pasos, entrenamientos) se leen solo con tu permiso explícito (Premium) y se usan solo para adaptar tu hidratación. Nunca se venden.\n\nIA: con tu consentimiento, tus mensajes al coach y tus estadísticas de hidratación se envían a Google Gemini y OpenAI para generar tus respuestas. Tus datos de Apple Salud nunca se les envían.\n\nPublicidad: la versión gratuita muestra anuncios de Google AdMob. Los usuarios Premium no ven anuncios.\n\nUbicación: se usa solo, a demanda, para mostrar puntos de agua cercanos. Sin ubicación en segundo plano.\n\nEliminación: puedes eliminar tu cuenta y datos en cualquier momento desde la app.\n\nContacto: support@aquadify.com",
       contactSupport: "Contactar con soporte",
     },
     badges: {
@@ -919,3 +921,9 @@ export const dict: Record<Lang, any> = {
     },
   },
 };
+
+(Object.keys(releaseDict) as Lang[]).forEach((lang) => {
+  Object.entries(releaseDict[lang]).forEach(([section, values]) => {
+    dict[lang][section] = { ...dict[lang][section], ...values };
+  });
+});

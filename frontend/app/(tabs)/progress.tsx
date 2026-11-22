@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { api } from "@/src/api/client";
 import AdBanner from "@/src/components/AdBanner";
 import { fetchInsights, Insights } from "@/src/api/insights";
+import { AiConsentCard } from "@/src/components/AiConsentCard";
 import { HEALTH_ENABLED, getHealthSnapshot } from "@/src/lib/healthkit";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
@@ -106,7 +107,7 @@ export default function ProgressScreen() {
           activity_trend: [],
           health,
           language: lang,
-        });
+        }, token);
         if (data && (data.tips?.length || data.score != null)) {
           setInsights(data);
         } else {
@@ -131,7 +132,8 @@ export default function ProgressScreen() {
       ]);
       setHistory(h);
       setGam(g);
-      if (!insightsOnce.current) {
+      // No data leaves for the AI providers before explicit consent.
+      if (user?.ai_consent && !insightsOnce.current) {
         insightsOnce.current = true;
         loadInsights(h, g);
       }
@@ -141,7 +143,7 @@ export default function ProgressScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, loadInsights]);
+  }, [token, loadInsights, user?.ai_consent]);
 
   useFocusEffect(
     useCallback(() => {
@@ -285,7 +287,14 @@ export default function ProgressScreen() {
           </View>
 
           <View style={styles.insightCard} testID="insights-card">
-            {insightsLoading && !insights ? (
+            {!user?.ai_consent ? (
+              <AiConsentCard
+                onAccepted={() => {
+                  insightsOnce.current = true;
+                  loadInsights(history, gam);
+                }}
+              />
+            ) : insightsLoading && !insights ? (
               <View style={styles.insightLoading}>
                 <ActivityIndicator color={colors.primary} />
                 <Text style={styles.insightMuted}>{t("insights.generating")}</Text>

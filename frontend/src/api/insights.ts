@@ -1,11 +1,7 @@
-// Premium AI hydration insights — served by the LOCAL backend (Emergent LLM).
-// The enhanced endpoint computes a hydration score /100 and returns contextual,
-// personalized tips (with reasons) + a same-day prediction, using Apple Health
-// data when available. Deploy the same endpoint on the remote backend for prod.
-import { INSIGHTS_BASE } from "@/src/config";
+// AI hydration insights, served by the authenticated Aquadify backend.
+// Apple Health values only feed the server-side score and never reach an AI provider.
+import { api } from "@/src/api/client";
 import type { HealthSnapshot } from "@/src/lib/healthkit";
-
-const LOCAL = INSIGHTS_BASE;
 
 export type InsightTip = { text: string; reason?: string };
 
@@ -36,12 +32,6 @@ export type InsightsPayload = {
   language: string;
 };
 
-export async function fetchInsights(payload: InsightsPayload): Promise<Insights> {
-  const res = await fetch(`${LOCAL}/api/insights`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) throw new Error("insights failed");
-  return res.json();
+export function fetchInsights(payload: InsightsPayload, token: string | null): Promise<Insights> {
+  return api.post<Insights>("/insights", payload, token);
 }

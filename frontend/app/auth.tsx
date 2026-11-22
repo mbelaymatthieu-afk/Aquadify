@@ -1,3 +1,4 @@
+import { Linking } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -235,7 +236,7 @@ export default function AuthScreen() {
           {mode === "signin" && (
             <Pressable
               testID="auth-forgot-link"
-              onPress={() => router.push("/forgot-password")}
+              onPress={() => Linking.openURL("mailto:support@aquadify.com?subject=Mot%20de%20passe%20Aquadify").catch(() => {})}
               style={styles.forgot}
             >
               <Text style={styles.forgotText}>{t("auth.forgot")}</Text>

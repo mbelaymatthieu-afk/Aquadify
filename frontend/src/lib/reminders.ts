@@ -67,12 +67,18 @@ export async function scheduleHydrationReminders(
 
   for (let i = 0; i < slots.length; i++) {
     await Notifications.scheduleNotificationAsync({
-      content: { title: "Aquadify 💧", body: messages[i], channelId: "hydration" },
+      content: { title: "Aquadify 💧", body: messages[i] },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: slots[i].hour,
         minute: slots[i].minute,
+        channelId: "hydration",
       },
     });
   }
+}
+
+export async function cancelHydrationReminders(): Promise<void> {
+  if (Platform.OS === "web") return;
+  await Notifications.cancelAllScheduledNotificationsAsync().catch(() => {});
 }

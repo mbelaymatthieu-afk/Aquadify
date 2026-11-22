@@ -8,6 +8,3 @@ const extra = (Constants.expoConfig?.extra || {}) as Record<string, string>;
 
 export const AQUADIFY_API =
   process.env.EXPO_PUBLIC_AQUADIFY_API || extra.aquadifyApiUrl;
-
-export const INSIGHTS_BASE =
-  process.env.EXPO_PUBLIC_BACKEND_URL || extra.insightsApiUrl;

@@ -38,6 +38,7 @@ import {
 import { accountAppAccountToken } from "@/src/lib/appAccountToken";
 
 const ORIGIN = "https://drip-track-1.emergent.host";
+const TERMS_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
 
 const FALLBACK_PLANS: IapProduct[] = [
   {
@@ -58,6 +59,9 @@ const FALLBACK_PLANS: IapProduct[] = [
     raw: null,
   },
 ];
+
+const isUserCancel = (code: string) =>
+  ["user-cancelled", "user_cancelled", "E_USER_CANCELLED"].includes(code);
 
 export default function PremiumScreen() {
   const insets = useSafeAreaInsets();
@@ -91,7 +95,7 @@ export default function PremiumScreen() {
     appAccountToken?: string | null;
   }) => {
     const updated = await verifyIapPurchase(payload, token);
-    setUser(updated);
+    setUser(updated?.user ?? updated);
     // Re-sync from the backend (source of truth) after verification.
     try {
       await refreshUser();
@@ -191,10 +195,7 @@ export default function PremiumScreen() {
         const message =
           err?.message || t("premium.failed");
 
-        if (
-          code !== "E_USER_CANCELLED" &&
-          code !== "user_cancelled"
-        ) {
+        if (!isUserCancel(code)) {
           toast.show(message, "error");
         }
       }
@@ -241,10 +242,7 @@ export default function PremiumScreen() {
     } catch (e: any) {
       const code = e?.code || "";
 
-      if (
-        code !== "E_USER_CANCELLED" &&
-        code !== "user_cancelled"
-      ) {
+      if (!isUserCancel(code)) {
         toast.show(
           e?.message || t("premium.verifyFailed"),
           "error"
@@ -291,8 +289,9 @@ export default function PremiumScreen() {
             },
             token,
           );
-          if (updated) setUser(updated);
-          restored = true;
+          if (updated?.user) setUser(updated.user);
+          // An expired or refunded subscription is not a successful restore.
+          if (updated?.is_premium) restored = true;
         } catch (e: any) {
           // 409 => this subscription is bound to another Aquadify account.
           if (e?.status === 409) conflict = true;
@@ -314,6 +313,15 @@ export default function PremiumScreen() {
       toast.show(t("premium.restoreUnavailable"), "info");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const reloadProducts = async () => {
+    setLoadingProducts(true);
+    try {
+      if (await initIap()) setProducts(await getSubscriptions());
+    } finally {
+      setLoadingProducts(false);
     }
   };
 
@@ -406,7 +414,7 @@ export default function PremiumScreen() {
       text: t("premium.f2"),
     },
     {
-      icon: "trophy",
+      icon: "ban",
       text: t("premium.f3"),
     },
     {
@@ -419,18 +427,12 @@ export default function PremiumScreen() {
     id.toLowerCase().includes("year");
 
   const displayPlans =
-    IAP_ENABLED && products.length > 0
-      ? products
+    Platform.OS === "ios"
+      ? products // Never show an offer that StoreKit did not return.
       : FALLBACK_PLANS;
 
-  // Show StoreKit's localized price ONLY when it is already in euros (real
-  // French storefront). On a non-EUR account (e.g. a US sandbox tester) StoreKit
-  // returns dollars — in that case fall back to the exact configured euro
-  // amounts so the paywall always shows 4,99 € / 59,99 €.
-  const displayEuroPrice = (p: IapProduct) => {
-    if (p.displayPrice && p.displayPrice.includes("€")) return p.displayPrice;
-    return isYearly(p.id) ? "59,99 €" : "4,99 €";
-  };
+  // Always the exact price Apple will charge in the user's storefront.
+  const displayEuroPrice = (p: IapProduct) => p.displayPrice;
 
   const selectedPlan =
     displayPlans.find((p) => p.id === selectedId) ?? displayPlans[0];
@@ -511,9 +513,7 @@ export default function PremiumScreen() {
             {t("premium.choosePlan")}
           </Text>
 
-          {displayPlans.some(
-            (p) => p.hasFreeTrial
-          ) && (
+          {!!selectedPlan?.hasFreeTrial && (
             <View
               style={styles.trialHero}
               testID="premium-trial-hero"
@@ -618,7 +618,18 @@ export default function PremiumScreen() {
             ))
           )}
 
-          {!(IAP_ENABLED && loadingProducts) && (
+          {Platform.OS === "ios" && !loadingProducts && products.length === 0 && (
+            <View style={styles.loadingBox} testID="premium-unavailable">
+              <Text style={styles.loadingText}>{t("premium.unavailable")}</Text>
+              {IAP_ENABLED && (
+                <Pressable testID="premium-retry" onPress={reloadProducts} hitSlop={8}>
+                  <Text style={styles.legalLink}>{t("common.retry")}</Text>
+                </Pressable>
+              )}
+            </View>
+          )}
+
+          {!(IAP_ENABLED && loadingProducts) && !!selectedPlan && (
             <Pressable
               testID="premium-subscribe"
               onPress={() =>
@@ -651,9 +662,7 @@ export default function PremiumScreen() {
             />
           )}
 
-          {displayPlans.some(
-            (p) => p.hasFreeTrial
-          ) && (
+          {!!selectedPlan?.hasFreeTrial && (
             <Text style={styles.trialNote}>
               {t("premium.trialNote")}
             </Text>
@@ -662,6 +671,16 @@ export default function PremiumScreen() {
           <Text style={styles.cancelNote}>
             {t("premium.cancelNote")}
           </Text>
+
+          <Text style={styles.legalText}>{t("premium.legal")}</Text>
+          <View style={styles.legalLinks}>
+            <Pressable testID="premium-terms" onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} hitSlop={8}>
+              <Text style={styles.legalLink}>{t("premium.terms")}</Text>
+            </Pressable>
+            <Pressable testID="premium-privacy" onPress={() => router.push("/privacy")} hitSlop={8}>
+              <Text style={styles.legalLink}>{t("privacy.title")}</Text>
+            </Pressable>
+          </View>
         </View>
 
         {IAP_ENABLED && user?.is_premium && (
@@ -724,6 +743,29 @@ export default function PremiumScreen() {
 const styles = StyleSheet.create({
   flex: {
     flex: 1,
+  },
+
+  legalText: {
+    color: colors.textMuted,
+    fontSize: font.tiny,
+    lineHeight: 16,
+    textAlign: "center",
+    marginTop: spacing.sm,
+  },
+
+  legalLinks: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
+    gap: spacing.md,
+    marginTop: spacing.sm,
+  },
+
+  legalLink: {
+    color: colors.primary,
+    fontSize: font.tiny,
+    fontWeight: "700",
+    textDecorationLine: "underline",
   },
 
   scroll: {

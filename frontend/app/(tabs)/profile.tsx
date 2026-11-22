@@ -516,6 +516,23 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* AI consent */}
+        <View style={styles.section}>
+          <View style={[styles.card, { flexDirection: "row", alignItems: "center", gap: spacing.md }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.rowLabel}>{t("aiConsent.setting")}</Text>
+              <Text style={styles.rowHint}>{t("aiConsent.settingHint")}</Text>
+            </View>
+            <Switch
+              testID="ai-consent-switch"
+              value={!!user.ai_consent}
+              onValueChange={(val) => save({ ai_consent: val })}
+              trackColor={{ true: colors.primary, false: colors.border }}
+              thumbColor={colors.white}
+            />
+          </View>
+        </View>
+
         {/* Logout */}
         <View style={styles.section}>
           <Pressable
@@ -562,6 +579,9 @@ export default function ProfileScreen() {
                 <Text style={styles.rowHint}>
                   {t("profile.deleteHint")}
                 </Text>
+                {user.is_premium && (
+                  <Text style={styles.rowHint}>{t("profile.deleteAppleNote")}</Text>
+                )}
               </View>
 
               <Ionicons

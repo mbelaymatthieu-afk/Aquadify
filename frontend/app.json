@@ -14,11 +14,39 @@
       "buildNumber": "23",
       "usesAppleSignIn": true,
       "infoPlist": {
-        "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicit\u00e9s pertinentes dans la version gratuite.",
-        "NSHealthShareUsageDescription": "Aquadify utilise vos donn\u00e9es d\u2019activit\u00e9 Apple Sant\u00e9 afin de personnaliser votre objectif d\u2019hydratation et vos recommandations.",
-        "NSHealthUpdateUsageDescription": "Aquadify peut enregistrer certaines informations li\u00e9es \u00e0 votre hydratation dans Apple Sant\u00e9 lorsque vous activez cette fonctionnalit\u00e9.",
+        "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicités pertinentes dans la version gratuite.",
+        "NSHealthShareUsageDescription": "Aquadify utilise vos données d’activité Apple Santé afin de personnaliser votre objectif d’hydratation et vos recommandations.",
+        "NSHealthUpdateUsageDescription": "Aquadify peut enregistrer certaines informations liées à votre hydratation dans Apple Santé lorsque vous activez cette fonctionnalité.",
         "NSLocationWhenInUseUsageDescription": "Localiser les points d'eau potable proches de vous.",
         "ITSAppUsesNonExemptEncryption": false
+      },
+      "privacyManifests": {
+        "NSPrivacyAccessedAPITypes": [
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryUserDefaults",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "CA92.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryFileTimestamp",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "C617.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategorySystemBootTime",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "35F9.1"
+            ]
+          },
+          {
+            "NSPrivacyAccessedAPIType": "NSPrivacyAccessedAPICategoryDiskSpace",
+            "NSPrivacyAccessedAPITypeReasons": [
+              "E174.1"
+            ]
+          }
+        ]
       }
     },
     "android": {
@@ -50,7 +78,8 @@
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-8009813538542789~2818700603",
-          "iosAppId": "ca-app-pub-8009813538542789~7753483038"
+          "iosAppId": "ca-app-pub-8009813538542789~7753483038",
+          "delayAppMeasurementInit": true
         }
       ],
       "expo-apple-authentication",
@@ -65,7 +94,14 @@
         {
           "background": false
         }
-      ]
+      ],
+      [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "Aquadify utilise cette autorisation pour afficher des publicités pertinentes dans la version gratuite."
+        }
+      ],
+      "expo-iap"
     ],
     "experiments": {
       "typedRoutes": true

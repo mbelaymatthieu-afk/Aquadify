@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 import { api } from "@/src/api/client";
+import { cancelHydrationReminders } from "@/src/lib/reminders";
 import { signInWithApple } from "@/src/lib/apple";
 import { storage } from "@/src/utils/storage";
 import { isJwtExpired } from "@/src/utils/jwt";
@@ -27,6 +28,7 @@ export type AquaUser = {
   reminder_start: string;
   reminder_end: string;
   is_premium: boolean;
+  ai_consent?: boolean;
   coach_used: number;
   coach_limit: number;
   push_enabled: boolean;
@@ -196,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
+    await cancelHydrationReminders();
     await storage.secureRemove(TOKEN_KEY);
     setToken(null);
     setUser(null);

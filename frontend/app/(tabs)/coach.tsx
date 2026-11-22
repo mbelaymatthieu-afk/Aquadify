@@ -16,6 +16,7 @@ import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { api } from "@/src/api/client";
+import { AiConsentCard } from "@/src/components/AiConsentCard";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
@@ -69,7 +70,7 @@ export default function CoachScreen() {
 
   const send = async () => {
     const text = input.trim();
-    if (!text || sending || limitReached) return;
+    if (!text || sending || limitReached || !user?.ai_consent) return;
     setInput("");
     setMessages((m) => [...m, { role: "user", text }]);
     setSending(true);
@@ -150,7 +151,11 @@ export default function CoachScreen() {
           )}
         </ScrollView>
 
-        {limitReached ? (
+        {!user?.ai_consent ? (
+          <View style={{ padding: spacing.md, paddingBottom: insets.bottom + spacing.sm }}>
+            <AiConsentCard />
+          </View>
+        ) : limitReached ? (
           <View style={[styles.upsell, { paddingBottom: insets.bottom + spacing.sm }]}>
             <Text style={styles.upsellText}>{t("coach.limitReached")}</Text>
             <Pressable
