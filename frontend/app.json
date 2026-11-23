@@ -17,7 +17,8 @@
         "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicités pertinentes dans la version gratuite.",
         "NSHealthShareUsageDescription": "Aquadify lit vos données Apple Santé, comme vos pas, vos entraînements et votre sommeil, pour adapter votre objectif d'hydratation. Par exemple : augmenter l'objectif après une séance de sport.",
         "NSLocationWhenInUseUsageDescription": "Aquadify utilise votre position lorsque vous ouvrez Points d'eau, pour afficher les fontaines proches. Par exemple : la fontaine la plus proche et sa distance à pied.",
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "NSHealthUpdateUsageDescription": "Aquadify lit uniquement vos données Apple Santé pour adapter votre objectif d'hydratation et n'y enregistre aucune donnée."
       },
       "privacyManifests": {
         "NSPrivacyAccessedAPITypes": [
@@ -96,7 +97,7 @@
         {
           "background": false,
           "NSHealthShareUsageDescription": "Aquadify lit vos données Apple Santé, comme vos pas, vos entraînements et votre sommeil, pour adapter votre objectif d'hydratation. Par exemple : augmenter l'objectif après une séance de sport.",
-          "NSHealthUpdateUsageDescription": false
+          "NSHealthUpdateUsageDescription": "Aquadify lit uniquement vos données Apple Santé pour adapter votre objectif d'hydratation et n'y enregistre aucune donnée."
         }
       ],
       [
