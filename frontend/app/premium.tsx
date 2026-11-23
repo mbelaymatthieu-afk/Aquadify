@@ -26,7 +26,6 @@ import {
   IAP_ENABLED,
   IapProduct,
   SKU_MONTHLY,
-  SKU_YEARLY,
   addPurchaseListeners,
   finishPurchase,
   getRestorablePurchases,
@@ -47,15 +46,6 @@ const FALLBACK_PLANS: IapProduct[] = [
     displayPrice: "4,99 €",
     // App Store Connect: the MONTHLY plan has a 7-day free trial.
     hasFreeTrial: true,
-    raw: null,
-  },
-  {
-    id: SKU_YEARLY,
-    title: "Annuel",
-    displayPrice: "59,99 €",
-    // App Store Connect: the YEARLY plan has NO free trial. Never simulate
-    // trial eligibility locally — StoreKit remains the source of truth.
-    hasFreeTrial: false,
     raw: null,
   },
 ];
@@ -79,8 +69,8 @@ export default function PremiumScreen() {
 
   const [products, setProducts] = useState<IapProduct[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(IAP_ENABLED);
-  // Currently selected plan (defaults to the yearly "best value" offer).
-  const [selectedId, setSelectedId] = useState<string>(SKU_YEARLY);
+  // Currently selected plan (monthly is the only offer).
+  const [selectedId, setSelectedId] = useState<string>(SKU_MONTHLY);
 
   const handledRef = useRef(false);
 

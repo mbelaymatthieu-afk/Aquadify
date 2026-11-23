@@ -16,6 +16,10 @@ export const PRODUCT_IDS = [
   SKU_YEARLY,
 ];
 
+// Only the monthly plan is sold. The yearly id stays in PRODUCT_IDS so that any
+// existing subscriber can still restore a purchase.
+export const OFFERED_PRODUCT_IDS = [SKU_MONTHLY];
+
 export type IapProduct = {
   id: string;
   title: string;
@@ -74,11 +78,11 @@ export async function getSubscriptions(): Promise<IapProduct[]> {
   try {
     console.log(
       "[IAP] Fetching subscriptions:",
-      PRODUCT_IDS,
+      OFFERED_PRODUCT_IDS,
     );
 
     const products = await iap().fetchProducts({
-      skus: PRODUCT_IDS,
+      skus: OFFERED_PRODUCT_IDS,
       type: "subs",
     });
 
@@ -193,7 +197,7 @@ export async function requestSubscription(
     appAccountToken || "(none)",
   );
 
-  if (!PRODUCT_IDS.includes(sku)) {
+  if (!OFFERED_PRODUCT_IDS.includes(sku)) {
     throw new Error(
       `Unknown Aquadify subscription SKU: ${sku}`,
     );
