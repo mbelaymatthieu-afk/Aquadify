@@ -15,9 +15,8 @@
       "usesAppleSignIn": true,
       "infoPlist": {
         "NSUserTrackingUsageDescription": "Aquadify utilise cette autorisation pour afficher des publicités pertinentes dans la version gratuite.",
-        "NSHealthShareUsageDescription": "Aquadify utilise vos données d’activité Apple Santé afin de personnaliser votre objectif d’hydratation et vos recommandations.",
-        "NSHealthUpdateUsageDescription": "Aquadify peut enregistrer certaines informations liées à votre hydratation dans Apple Santé lorsque vous activez cette fonctionnalité.",
-        "NSLocationWhenInUseUsageDescription": "Localiser les points d'eau potable proches de vous.",
+        "NSHealthShareUsageDescription": "Aquadify lit vos données Apple Santé, comme vos pas, vos entraînements et votre sommeil, pour adapter votre objectif d'hydratation. Par exemple : augmenter l'objectif après une séance de sport.",
+        "NSLocationWhenInUseUsageDescription": "Aquadify utilise votre position lorsque vous ouvrez Points d'eau, pour afficher les fontaines proches. Par exemple : la fontaine la plus proche et sa distance à pied.",
         "ITSAppUsesNonExemptEncryption": false
       },
       "privacyManifests": {
@@ -86,13 +85,15 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Localiser les points d'eau potable proches de vous."
+          "locationWhenInUsePermission": "Aquadify utilise votre position lorsque vous ouvrez Points d'eau, pour afficher les fontaines proches. Par exemple : la fontaine la plus proche et sa distance à pied."
         }
       ],
       [
         "@kingstinct/react-native-healthkit",
         {
-          "background": false
+          "background": false,
+          "NSHealthShareUsageDescription": "Aquadify lit vos données Apple Santé, comme vos pas, vos entraînements et votre sommeil, pour adapter votre objectif d'hydratation. Par exemple : augmenter l'objectif après une séance de sport.",
+          "NSHealthUpdateUsageDescription": false
         }
       ],
       [
