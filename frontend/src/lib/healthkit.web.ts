@@ -9,22 +9,11 @@ export type TodayActivity = {
 
 export type HealthSnapshot = {
   steps?: number;
-  distance_km?: number;
   active_energy?: number;
-  total_energy?: number;
-  heart_rate?: number;
   resting_heart_rate?: number;
   workouts?: number;
   workout_minutes?: number;
-  workout_types?: string[];
-  stand_minutes?: number;
-  flights_climbed?: number;
-  weight_kg?: number;
-  bmi?: number;
   sleep_hours?: number;
-  hrv?: number;
-  respiratory_rate?: number;
-  spo2?: number;
 };
 
 export function isAvailable(): boolean {
