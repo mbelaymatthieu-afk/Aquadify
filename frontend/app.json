@@ -85,7 +85,10 @@
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Aquadify utilise votre position lorsque vous ouvrez Points d'eau, pour afficher les fontaines proches. Par exemple : la fontaine la plus proche et sa distance à pied."
+          "locationWhenInUsePermission": "Aquadify utilise votre position lorsque vous ouvrez Points d'eau, pour afficher les fontaines proches. Par exemple : la fontaine la plus proche et sa distance à pied.",
+          "locationAlwaysAndWhenInUsePermission": false,
+          "locationAlwaysPermission": false,
+          "isIosBackgroundLocationEnabled": false
         }
       ],
       [
