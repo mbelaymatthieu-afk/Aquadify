@@ -18,7 +18,7 @@ import { Mascot } from "@/src/components/Mascot";
 import { PremiumSuccess } from "@/src/components/PremiumSuccess";
 import { useToast } from "@/src/components/Toast";
 import { api } from "@/src/api/client";
-import { verifyIapPurchase, restoreIapPurchase } from "@/src/api/account";
+import { verifyIapPurchase, restoreIapPurchase, verifyGooglePurchase } from "@/src/api/account";
 import { useAuth } from "@/src/context/AuthContext";
 import { useI18n } from "@/src/i18n";
 import { colors, font, radius, shadow, spacing } from "@/src/theme";
@@ -37,7 +37,11 @@ import {
 import { accountAppAccountToken } from "@/src/lib/appAccountToken";
 
 const ORIGIN = "https://drip-track-1.emergent.host";
-const TERMS_URL = "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+const TERMS_URL =
+  Platform.OS === "android"
+    ? "https://play.google.com/about/play-terms/"
+    : "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/";
+const IS_ANDROID = Platform.OS === "android";
 
 const FALLBACK_PLANS: IapProduct[] = [
   {
@@ -104,6 +108,29 @@ export default function PremiumScreen() {
       purchase?.id ??
       purchase?.ids?.[0] ??
       "";
+
+    if (IS_ANDROID) {
+      const purchaseToken =
+        purchase?.purchaseToken ?? purchase?.purchaseTokenAndroid;
+      // purchaseState "pending" = payment not completed yet (e.g. cash):
+      // nothing to unlock until Google confirms it.
+      if (!purchaseToken || purchase?.purchaseState === "pending") return;
+      const updated = await verifyGooglePurchase(
+        { productId, purchaseToken },
+        token,
+      );
+      setUser(updated?.user ?? updated);
+      try {
+        await refreshUser();
+      } catch {
+        // non-fatal
+      }
+      setShowSuccess(true);
+      // Backend already acknowledged the purchase; this also tells the
+      // Play Billing client the transaction is done.
+      await finishPurchase(purchase);
+      return;
+    }
 
     const transactionId =
       purchase?.transactionId ??
@@ -265,6 +292,22 @@ export default function PremiumScreen() {
       let conflict = false;
 
       for (const p of purchases) {
+        if (IS_ANDROID) {
+          const purchaseToken = p?.purchaseToken ?? p?.purchaseTokenAndroid;
+          if (!purchaseToken) continue;
+          try {
+            const updated = await verifyGooglePurchase(
+              { productId: p?.productId ?? p?.id ?? "", purchaseToken },
+              token,
+            );
+            if (updated?.user) setUser(updated.user);
+            if (updated?.is_premium) restored = true;
+          } catch (e: any) {
+            if (e?.status === 409) conflict = true;
+          }
+          continue;
+        }
+
         const jws =
           p?.purchaseToken ?? p?.jwsRepresentationIOS;
         if (!jws) continue;
@@ -416,10 +459,9 @@ export default function PremiumScreen() {
   const isYearly = (id: string) =>
     id.toLowerCase().includes("year");
 
-  const displayPlans =
-    Platform.OS === "ios"
-      ? products // Never show an offer that StoreKit did not return.
-      : FALLBACK_PLANS;
+  const displayPlans = IAP_ENABLED
+    ? products // Never show an offer that the store did not return.
+    : FALLBACK_PLANS;
 
   // Always the exact price Apple will charge in the user's storefront.
   const displayEuroPrice = (p: IapProduct) => p.displayPrice;
@@ -428,7 +470,7 @@ export default function PremiumScreen() {
     displayPlans.find((p) => p.id === selectedId) ?? displayPlans[0];
 
   const onSelectPlan = (p: IapProduct) => {
-    if (Platform.OS === "ios") {
+    if (IAP_ENABLED) {
       return buy(p.id);
     }
 
@@ -608,7 +650,7 @@ export default function PremiumScreen() {
             ))
           )}
 
-          {Platform.OS === "ios" && !loadingProducts && products.length === 0 && (
+          {IAP_ENABLED && !loadingProducts && products.length === 0 && (
             <View style={styles.loadingBox} testID="premium-unavailable">
               <Text style={styles.loadingText}>{t("premium.unavailable")}</Text>
               {IAP_ENABLED && (
@@ -659,10 +701,10 @@ export default function PremiumScreen() {
           )}
 
           <Text style={styles.cancelNote}>
-            {t("premium.cancelNote")}
+            {t(IS_ANDROID ? "premium.cancelNoteAndroid" : "premium.cancelNote")}
           </Text>
 
-          <Text style={styles.legalText}>{t("premium.legal")}</Text>
+          <Text style={styles.legalText}>{t(IS_ANDROID ? "premium.legalAndroid" : "premium.legal")}</Text>
           <View style={styles.legalLinks}>
             <Pressable testID="premium-terms" onPress={() => WebBrowser.openBrowserAsync(TERMS_URL)} hitSlop={8}>
               <Text style={styles.legalLink}>{t("premium.terms")}</Text>

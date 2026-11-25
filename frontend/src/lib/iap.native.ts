@@ -1,9 +1,39 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-// Apple StoreKit 2 in-app subscriptions via expo-iap.
+// In-app subscriptions via expo-iap: Apple StoreKit 2 on iOS, Google Play
+// Billing on Android.
+export const IS_ANDROID = Platform.OS === "android";
+
 export const IAP_ENABLED =
-  Platform.OS === "ios" && Constants.appOwnership !== "expo";
+  (Platform.OS === "ios" || IS_ANDROID) &&
+  Constants.appOwnership !== "expo";
+
+export const ANDROID_PACKAGE = "com.mtagency.aquadify";
+
+// Google Play needs the offer token of the chosen offer (free trial when the
+// user is eligible, otherwise the base plan) to start a subscription purchase.
+const androidOfferTokens: Record<string, string> = {};
+
+const isFreePhase = (ph: any) => String(ph?.priceAmountMicros ?? "") === "0";
+
+function mapAndroidProduct(p: any) {
+  const offers: any[] = p.subscriptionOfferDetailsAndroid ?? [];
+  const phasesOf = (o: any): any[] => o?.pricingPhases?.pricingPhaseList ?? [];
+  // Google only returns the offers this user is eligible for.
+  const trial = offers.find((o) => phasesOf(o).some(isFreePhase));
+  const base = offers.find((o) => !o.offerId) ?? offers[0];
+  const chosen = trial ?? base;
+  if (chosen?.offerToken) androidOfferTokens[p.id] = chosen.offerToken;
+  const recurring = phasesOf(chosen).filter((ph) => !isFreePhase(ph)).pop();
+  return {
+    id: p.id,
+    title: p.displayName ?? p.title ?? p.id,
+    displayPrice: recurring?.formattedPrice ?? p.displayPrice ?? "",
+    hasFreeTrial: !!trial,
+    raw: p,
+  };
+}
 
 export const SKU_MONTHLY =
   "com.mtagency.aquadify.premium.monthly";
@@ -93,9 +123,13 @@ export async function getSubscriptions(): Promise<IapProduct[]> {
 
     if (!products || products.length === 0) {
       console.log(
-        "[IAP] WARNING: Apple returned ZERO subscriptions",
+        "[IAP] WARNING: the store returned ZERO subscriptions",
       );
       return [];
+    }
+
+    if (IS_ANDROID) {
+      return products.map(mapAndroidProduct);
     }
 
     const mapped = products.map((p: any) => {
@@ -201,6 +235,26 @@ export async function requestSubscription(
     throw new Error(
       `Unknown Aquadify subscription SKU: ${sku}`,
     );
+  }
+
+  if (IS_ANDROID) {
+    const offerToken = androidOfferTokens[sku];
+    if (!offerToken) {
+      throw new Error("Subscription offer not loaded yet");
+    }
+    // The per-account UUID is stored by Google as obfuscatedExternalAccountId;
+    // the backend checks it to bind the purchase to the right account.
+    const google: any = {
+      skus: [sku],
+      subscriptionOffers: [{ sku, offerToken }],
+    };
+    if (appAccountToken) google.obfuscatedAccountId = appAccountToken;
+    const result = await iap().requestPurchase({
+      request: { google },
+      type: "subs",
+    });
+    console.log("[IAP] Android requestPurchase resolved:", JSON.stringify(result));
+    return result;
   }
 
   // Attach the stable per-account UUID so StoreKit embeds it in the signed
@@ -358,5 +412,8 @@ export async function getRestorablePurchases(): Promise<any[]> {
 export async function openManageSubscriptions(): Promise<void> {
   if (!IAP_ENABLED) return;
 
-  await iap().deepLinkToSubscriptions();
+  await iap().deepLinkToSubscriptions({
+    skuAndroid: SKU_MONTHLY,
+    packageNameAndroid: ANDROID_PACKAGE,
+  });
 }

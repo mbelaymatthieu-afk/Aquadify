@@ -370,7 +370,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              {Platform.OS === "ios" && (
+              {(Platform.OS === "ios" || Platform.OS === "android") && (
                 <Pressable
                   testID="profile-manage-sub"
                   onPress={() => {
@@ -438,6 +438,8 @@ export default function ProfileScreen() {
           </Text>
 
           <View style={styles.card}>
+            {/* Google Fit is shut down: the health sync is iOS-only (Apple Health). */}
+            {Platform.OS === "ios" && (
             <Pressable
               testID="link-health"
               onPress={() => router.push("/health")}
@@ -469,6 +471,7 @@ export default function ProfileScreen() {
                 color={colors.textMuted}
               />
             </Pressable>
+            )}
 
             <Pressable
               testID="link-waterpoints"
@@ -580,7 +583,7 @@ export default function ProfileScreen() {
                   {t("profile.deleteHint")}
                 </Text>
                 {user.is_premium && (
-                  <Text style={styles.rowHint}>{t("profile.deleteAppleNote")}</Text>
+                  <Text style={styles.rowHint}>{t(Platform.OS === "android" ? "profile.deleteGoogleNote" : "profile.deleteAppleNote")}</Text>
                 )}
               </View>
 

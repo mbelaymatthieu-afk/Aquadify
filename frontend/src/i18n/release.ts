@@ -11,6 +11,7 @@ export const releaseDict = {
     },
     profile: {
       deleteAppleNote: "Un abonnement Apple se résilie séparément dans vos réglages Apple, sinon il reste facturé.",
+      deleteGoogleNote: "Un abonnement Google Play se résilie séparément dans l'appli Google Play, sinon il reste facturé.",
     },
     premium: {
       f2: "Aquanalyse complète",
@@ -18,6 +19,8 @@ export const releaseDict = {
       unavailable: "Les abonnements ne sont pas disponibles pour le moment.",
       terms: "Conditions d'utilisation",
       legal: "Abonnement à renouvellement automatique. Le paiement est débité sur votre compte Apple à la confirmation ou à la fin de l'essai. Il se renouvelle au même prix sauf résiliation au moins 24 h avant la fin de la période.",
+      legalAndroid: "Abonnement à renouvellement automatique. Le paiement est débité sur votre compte Google Play à la confirmation ou à la fin de l'essai. Il se renouvelle au même prix sauf résiliation avant la fin de la période.",
+      cancelNoteAndroid: "Vous pouvez résilier votre abonnement à tout moment depuis l'appli Google Play (Paiements et abonnements).",
     },
   },
   en: {
@@ -31,6 +34,7 @@ export const releaseDict = {
     },
     profile: {
       deleteAppleNote: "An Apple subscription is cancelled separately in your Apple settings, otherwise it keeps being billed.",
+      deleteGoogleNote: "A Google Play subscription is cancelled separately in the Google Play app, otherwise it keeps being billed.",
     },
     premium: {
       f2: "Full Aquanalyse",
@@ -38,6 +42,8 @@ export const releaseDict = {
       unavailable: "Subscriptions are not available right now.",
       terms: "Terms of Use",
       legal: "Auto-renewing subscription. Payment is charged to your Apple account at confirmation or at the end of the trial. It renews at the same price unless cancelled at least 24 hours before the end of the period.",
+      legalAndroid: "Auto-renewing subscription. Payment is charged to your Google Play account at confirmation or at the end of the trial. It renews at the same price unless cancelled before the end of the period.",
+      cancelNoteAndroid: "You can cancel your subscription anytime in the Google Play app (Payments & subscriptions).",
     },
   },
   es: {
@@ -51,6 +57,7 @@ export const releaseDict = {
     },
     profile: {
       deleteAppleNote: "Una suscripción de Apple se cancela por separado en tus ajustes de Apple; si no, se sigue cobrando.",
+      deleteGoogleNote: "Una suscripción de Google Play se cancela por separado en la app de Google Play; si no, se sigue cobrando.",
     },
     premium: {
       f2: "Aquanalyse completo",
@@ -58,6 +65,8 @@ export const releaseDict = {
       unavailable: "Las suscripciones no están disponibles por ahora.",
       terms: "Condiciones de uso",
       legal: "Suscripción con renovación automática. El pago se carga a tu cuenta de Apple al confirmar o al final de la prueba. Se renueva al mismo precio salvo cancelación al menos 24 h antes del final del periodo.",
+      legalAndroid: "Suscripción con renovación automática. El pago se carga a tu cuenta de Google Play al confirmar o al final de la prueba. Se renueva al mismo precio salvo cancelación antes del final del periodo.",
+      cancelNoteAndroid: "Puedes cancelar tu suscripción cuando quieras desde la app de Google Play (Pagos y suscripciones).",
     },
   },
 } as const;

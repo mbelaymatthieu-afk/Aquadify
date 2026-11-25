@@ -47,3 +47,15 @@ export async function restoreIapPurchase(
   };
   return api.post("/iap/restore", body, token);
 }
+
+// Google Play: the backend asks the Google Play Developer API for this purchase
+// token, checks the product, the state and the account binding, then grants
+// Premium. Used for new purchases AND restores. Throws on failure (409 when the
+// subscription belongs to another Aquadify account) — Premium is NEVER granted
+// locally.
+export async function verifyGooglePurchase(
+  payload: { productId: string; purchaseToken: string },
+  token: string | null,
+): Promise<any> {
+  return api.post("/iap/google/verify", payload, token);
+}
