@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { Platform } from "react-native";
 
 import { api } from "@/src/api/client";
+import { AQUADIFY_API } from "@/src/config";
 import { cancelHydrationReminders } from "@/src/lib/reminders";
 import { signInWithApple } from "@/src/lib/apple";
 import { storage } from "@/src/utils/storage";
@@ -162,7 +163,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       Platform.OS === "web"
         ? (typeof window !== "undefined" ? window.location.origin + "/" : "")
         : Linking.createURL("auth");
-    const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    // Android: Chrome Custom Tabs block the auth provider's script redirect to
+    // aquadify:// (ERR_UNKNOWN_URL_SCHEME). Bounce through an https page on our
+    // backend whose button (a real user tap) opens the app via intent://.
+    const providerRedirect =
+      Platform.OS === "android" ? `${AQUADIFY_API}/auth/app-return` : redirectUrl;
+    const authUrl = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(providerRedirect)}`;
 
     if (Platform.OS === "web") {
       if (typeof window !== "undefined") window.location.href = authUrl;
